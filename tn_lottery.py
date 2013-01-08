@@ -43,7 +43,7 @@ class Lottery(object):
         """Powerball - http://www.tnlottery.com/howtoplay/#power"""
         values = self._choose(num=5, val_range=(1, 59))
         powerball = self._choose(num=1, val_range=(1, 39))[0]
-        return "Powerball:\n\t{0} - Powerball: {1}".format(
+        return "Powerball: {0} - Powerball: {1}".format(
             ', '.join(values),
             powerball
         )
@@ -52,11 +52,29 @@ class Lottery(object):
         """Mega Millions - http://www.tnlottery.com/howtoplay/#mega"""
         values = self._choose(num=5, val_range=(1, 56))
         megaball = self._choose(num=1, val_range=(1, 46))[0]
-        return "Mega Millions:\n\t{0} - Mega Ball: {1}".format(
+        return "Mega Millions: {0} - Mega Ball: {1}".format(
             ', '.join(values),
             megaball
         )
 
+    def tn_cash(self):
+        """Tennessee Cash - http://www.tnlottery.com/howtoplay/#tncash"""
+        values = self._choose(num=5, val_range=(1, 35))
+        cash_ball = self._choose(num=1, val_range=(1, 5))[0]
+        return "TN Cash: {0} - Cash Ball: {1}".format(
+            ', '.join(values),
+            cash_ball
+        )
+
+    def cash_four(self):
+        """Cash 4 - http://www.tnlottery.com/howtoplay/#cash4chart"""
+        value = self._choose(num=1, val_range=(0, 9999))[0]
+        return "Cash 4: {0:{fill}4d}".format(int(value), fill='0')
+
+    def cash_three(self):
+        """Cash 3 - http://www.tnlottery.com/howtoplay/#cashchart"""
+        value = self._choose(num=1, val_range=(0, 999))[0]
+        return "Cash 3: {0:{fill}3d}".format(int(value), fill='0')
 
 if __name__ == "__main__":
     # Prints randomly generated numbers for the different TN Lottery games.
@@ -65,4 +83,7 @@ if __name__ == "__main__":
     print("\n-------------------\nTN Lottery Numbers!\n-------------------\n")
     print(lottery.powerball())
     print(lottery.mega_millions())
+    print(lottery.tn_cash())
+    print(lottery.cash_four())
+    print(lottery.cash_three())
     print("\nGood Luck! (you'll need it)\n\n")

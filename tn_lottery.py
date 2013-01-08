@@ -20,13 +20,16 @@ class Lottery(object):
         """Powerball - http://www.tnlottery.com/howtoplay/#power"""
         values = self._choose(num=5, val_range=(1, 59))
         powerball = self._choose(num=1, val_range=(1, 39))[0]
-        return "Powerball: {0} - PB {1}".format(', '.join(values), powerball)
+        return "Powerball:\n\t{0} - Powerball: {1}".format(
+            ', '.join(values),
+            powerball
+        )
 
     def mega_millions(self):
         """Mega Millions - http://www.tnlottery.com/howtoplay/#mega"""
         values = self._choose(num=5, val_range=(1, 56))
         megaball = self._choose(num=1, val_range=(1, 46))[0]
-        return "Mega Millions: {0} - Mega Ball: {1}".format(
+        return "Mega Millions:\n\t{0} - Mega Ball: {1}".format(
             ', '.join(values),
             megaball
         )
@@ -37,5 +40,6 @@ if __name__ == "__main__":
 
     lottery = Lottery()
     print("\n-------------------\nTN Lottery Numbers!\n-------------------\n")
-    print(lotter.powerball())
-    print(lotter.mega_millions())
+    print(lottery.powerball())
+    print(lottery.mega_millions())
+    print("\nGood Luck! (you'll need it)\n\n")

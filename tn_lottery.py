@@ -37,7 +37,7 @@ class Lottery(object):
     def _choose(self, num, val_range):
         """Randomly choose ``num`` values in the ``val_range`` range."""
         vmin, vmax = val_range
-        return [str(random.randint(vmin, vmax)) for i in xrange(num)]
+        return sorted([str(random.randint(vmin, vmax)) for i in range(num)])
 
     def powerball(self):
         """Powerball - http://www.tnlottery.com/howtoplay/#power"""

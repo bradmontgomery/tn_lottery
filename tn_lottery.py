@@ -42,7 +42,7 @@ class Lottery(object):
     def powerball(self):
         """Powerball - http://www.tnlottery.com/howtoplay/#power"""
         values = self._choose(num=5, val_range=(1, 59))
-        powerball = self._choose(num=1, val_range=(1, 39))[0]
+        powerball = self._choose(num=1, val_range=(1, 35))[0]
         return "Powerball: {0} - Powerball: {1}".format(
             ', '.join(values),
             powerball

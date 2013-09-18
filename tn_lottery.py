@@ -37,14 +37,18 @@ class Lottery(object):
     def _choose(self, num, val_range):
         """Randomly choose ``num`` values in the ``val_range`` range."""
         vmin, vmax = val_range
-        return sorted([str(random.randint(vmin, vmax)) for i in range(num)])
+        return sorted([random.randint(vmin, vmax) for i in range(num)])
+
+    def _to_str_list(self, values):
+        """convert a list of int's to a list of str's."""
+        return [str(v) for v in values]
 
     def powerball(self):
         """Powerball - http://www.tnlottery.com/howtoplay/#power"""
         values = self._choose(num=5, val_range=(1, 59))
         powerball = self._choose(num=1, val_range=(1, 35))[0]
         return "Powerball: {0} - Powerball: {1}".format(
-            ', '.join(values),
+            ', '.join(self._to_str_list(values)),
             powerball
         )
 
@@ -53,7 +57,7 @@ class Lottery(object):
         values = self._choose(num=5, val_range=(1, 56))
         megaball = self._choose(num=1, val_range=(1, 46))[0]
         return "Mega Millions: {0} - Mega Ball: {1}".format(
-            ', '.join(values),
+            ', '.join(self._to_str_list(values)),
             megaball
         )
 
@@ -62,7 +66,7 @@ class Lottery(object):
         values = self._choose(num=5, val_range=(1, 35))
         cash_ball = self._choose(num=1, val_range=(1, 5))[0]
         return "TN Cash: {0} - Cash Ball: {1}".format(
-            ', '.join(values),
+            ', '.join(self._to_str_list(values)),
             cash_ball
         )
 

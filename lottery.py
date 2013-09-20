@@ -12,7 +12,7 @@ class Lottery(object):
 
     def _to_str_list(self, values):
         """convert a list of int's to a list of str's."""
-        return [str(v) for v in values]
+        return ["{0:02d}".format(v) for v in values]
 
     def powerball(self):
         """Returns a tuple of (``values``, ``powerball``) for the Powerball.
@@ -26,7 +26,7 @@ class Lottery(object):
     def print_powerball(self):
         """Returns a string containing powerball numbers."""
         values, powerball = self.powerball()
-        return "Powerball: {0} - Powerball: {1}".format(
+        return "Powerball: {0} - Powerball: {1:02d}".format(
             ', '.join(self._to_str_list(values)),
             powerball
         )
@@ -43,7 +43,7 @@ class Lottery(object):
     def print_mega_millions(self):
         """Returns a string containing Mega Millions numbers."""
         values, megaball = self.mega_millions()
-        return "Mega Millions: {0} - Mega Ball: {1}".format(
+        return "Mega Millions: {0} - Mega Ball: {1:02d}".format(
             ', '.join(self._to_str_list(values)),
             megaball
         )
@@ -60,7 +60,7 @@ class Lottery(object):
     def print_tn_cash(self):
         """Returns a string containing TN Cash numbers."""
         values, cash_ball = self.tn_cash()
-        return "TN Cash: {0} - Cash Ball: {1}".format(
+        return "TN Cash: {0} - Cash Ball: {1:02d}".format(
             ', '.join(self._to_str_list(values)),
             cash_ball
         )

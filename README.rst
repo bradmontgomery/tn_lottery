@@ -3,12 +3,23 @@ TN lotto
 
 Tools to generate random numbers for the `Tennessee lottery <http://www.tnlottery.com>`_.
 
+Supported Games
+---------------
+
+* Powerball
+* Mega Millions
+* Hot Lotto Sizzler
+* Tennessee Cash
+* Cash 4
+* Cash 3
 
 Usage
 -----
 
-Run ``python play.py -h`` for instructions. You can generate numbers for
-various games.
+1. Check out this repo.
+2. Run ``python tn_lottery/play.py -h`` for instructions.
+
+You can generate numbers forvarious games.
 
 
 Examples
@@ -17,7 +28,7 @@ Examples
 Generate one set of numbers for all games
 ::
 
-    $ python play.py
+    $ python tn_lottery/play.py
 
     TN Lottery Numbers!
     --------------------------------------------------
@@ -30,7 +41,7 @@ Generate one set of numbers for all games
 Generate 5 sets of numbers for the Powerball
 ::
 
-    $ ./play.py -g powerball -n 5
+    $ ./tn_lottery/play.py -g powerball -n 5
 
     powerball Numbers!
     --------------------------------------------------

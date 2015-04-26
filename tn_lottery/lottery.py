@@ -5,6 +5,28 @@ import random
 
 class Lottery(object):
 
+    game_data = {
+        'powerball': 'Powerball',
+        'megamillions': 'Mega Millions',
+        'hotlotto': 'Hot Lotto Sizzler',
+        'tncash': 'Tennessee Cash',
+        'cash4': 'Cash 4',
+        'cash3': 'Cash 3',
+    }
+
+    @staticmethod
+    def title(game):
+        return Lottery.game_data.get(game)
+
+    @staticmethod
+    def games():
+        """A list of supported games."""
+        return list(Lottery.game_data.keys())
+
+    def _padding(self):
+        """Padding size for game titles."""
+        return max(len(g) for g in Lottery.game_data.values())
+
     def _choose(self, num, val_range):
         """Randomly choose ``num`` values in the ``val_range`` range."""
         vmin, vmax = val_range
@@ -26,7 +48,8 @@ class Lottery(object):
     def print_powerball(self):
         """Returns a string containing powerball numbers."""
         values, powerball = self.powerball()
-        return "Powerball: {0} - Powerball: {1:02d}".format(
+        return "{0}: {1} - {2:02d}".format(
+            self.game_data['powerball'].ljust(self._padding()),
             ', '.join(self._to_str_list(values)),
             powerball
         )
@@ -43,7 +66,8 @@ class Lottery(object):
     def print_mega_millions(self):
         """Returns a string containing Mega Millions numbers."""
         values, megaball = self.mega_millions()
-        return "Mega Millions: {0} - Mega Ball: {1:02d}".format(
+        return "{0}: {1} - {2:02d}".format(
+            self.game_data['megamillions'].ljust(self._padding()),
             ', '.join(self._to_str_list(values)),
             megaball
         )
@@ -60,7 +84,8 @@ class Lottery(object):
     def print_hot_lotto_sizzler(self):
         """Returns a string containing Hot Lotto Sizzler numbers."""
         values, hotball = self.hot_lotto_sizzler()
-        return "Hot Lotto: {0} - Hot Ball: {1:02d}".format(
+        return "{0}: {1} - {2:02d}".format(
+            self.game_data['hotlotto'].ljust(self._padding()),
             ', '.join(self._to_str_list(values)),
             hotball
         )
@@ -77,7 +102,8 @@ class Lottery(object):
     def print_tn_cash(self):
         """Returns a string containing TN Cash numbers."""
         values, cash_ball = self.tn_cash()
-        return "TN Cash: {0} - Cash Ball: {1:02d}".format(
+        return "{0}: {1} - {2:02d}".format(
+            self.game_data['tncash'].ljust(self._padding()),
             ', '.join(self._to_str_list(values)),
             cash_ball
         )
@@ -92,7 +118,11 @@ class Lottery(object):
     def print_cash_four(self):
         """Returns a string containing Cash Four numbers."""
         value = self.cash_four()
-        return "Cash 4: {0:{fill}4d}".format(int(value), fill='0')
+        return "{0}: {1:{fill}4d}".format(
+            self.game_data['cash4'].ljust(self._padding()),
+            int(value),
+            fill='0'
+        )
 
     def cash_three(self):
         """Returns a 3-digit number for Cash 3.
@@ -104,4 +134,8 @@ class Lottery(object):
     def print_cash_three(self):
         """Returns a string containing Cash Three numbers."""
         value = self.cash_three()
-        return "Cash 3: {0:{fill}3d}".format(int(value), fill='0')
+        return "{0}: {1:{fill}3d}".format(
+            self.game_data['cash3'].ljust(self._padding()),
+            int(value),
+            fill='0'
+        )

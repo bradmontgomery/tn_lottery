@@ -36,25 +36,20 @@ def run():
 
     # Print a list of games & exist (if applicable)
     if options.list:
-        print("""\nYou may use the following with the -g or --game flag:
-    * powerball -- Powerball.
-    * megamillions -- Mega Millions.
-    * hotlotto -- Hot Lotto Sizzler.
-    * tncash -- Tennessee Cash.
-    * cash4 -- Cash 4.
-    * cash3 -- Cash 3.
-        """)
+        print("\nYou may use the following with the -g or --game flag:")
+        for game, title in Lottery.game_data.items():
+            print("* {0} -- {1}.".format(game, title))
         sys.exit()
 
     # The full list of games.
-    games = ['powerball', 'megamillions', 'hotlotto', 'tncash', 'cash4', 'cash3']
+    games = Lottery.games()
     if options.game and options.game not in games:
         sys.stderr.write("\n{0} is not a valid game.\n".format(options.game))
         sys.exit(1)
     elif options.game:
-        games = [options.game]
+        games = [options.game]  # Just play a single game
 
-    # Prints randomly generated numbers for the selected TN Lottery games.
+    # Prints randomly generated numbers for the selected TN Lottery game
     print("\n" + "+" * 50)
     game_name = options.game if options.game else "TN Lottery"
     print("{0} Numbers!".format(game_name))

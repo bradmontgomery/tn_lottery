@@ -26,6 +26,7 @@ if __name__ == "__main__":
         print("""\nYou may use the following with the -g or --game flag:
     * powerball -- Powerball.
     * megamillions -- Mega Millions.
+    * hotlotto -- Hot Lotto Sizzler.
     * tncash -- Tennessee Cash.
     * cash4 -- Cash 4.
     * cash3 -- Cash 3.
@@ -33,7 +34,7 @@ if __name__ == "__main__":
         sys.exit()
 
     # The full list of games.
-    games = ['powerball', 'megamillions', 'tncash', 'cash4', 'cash3']
+    games = ['powerball', 'megamillions', 'hotlotto', 'tncash', 'cash4', 'cash3']
     if options.game and options.game not in games:
         sys.stderr.write("\n{0} is not a valid game.\n".format(options.game))
         sys.exit(1)
@@ -51,6 +52,8 @@ if __name__ == "__main__":
             print(lottery.print_powerball())
         if "megamillions" in games:
             print(lottery.print_mega_millions())
+        if "hotlotto" in games:
+            print(lottery.print_hot_lotto_sizzler())
         if "tncash" in games:
             print(lottery.print_tn_cash())
         if "cash4" in games:

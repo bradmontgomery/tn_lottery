@@ -48,6 +48,23 @@ class Lottery(object):
             megaball
         )
 
+    def hot_lotto_sizzler(self):
+        """Returns a tuple of (``values``, ``hotball``) for the Hot Lotto
+        Sizzler game. See: http://www.tnlottery.com/howtoplay/#hotlotto
+
+        """
+        values = self._choose(num=5, val_range=(1, 47))
+        hotball = self._choose(num=1, val_range=(1, 19))[0]
+        return (values, hotball)
+
+    def print_hot_lotto_sizzler(self):
+        """Returns a string containing Hot Lotto Sizzler numbers."""
+        values, hotball = self.hot_lotto_sizzler()
+        return "Hot Lotto: {0} - Hot Ball: {1:02d}".format(
+            ', '.join(self._to_str_list(values)),
+            hotball
+        )
+
     def tn_cash(self):
         """Returns a tuple of (``values``, ``cashball``) for of Tennessee Cash.
         See: http://www.tnlottery.com/howtoplay/#tncash

@@ -9,15 +9,28 @@ from lottery import Lottery
 parser = argparse.ArgumentParser(
     description="Generate numbers for some TN Lottery Games"
 )
-parser.add_argument('-l', '--list', action="store_true",
-    help="list available games")
-parser.add_argument('-g', '--game', type=str,
-    help="play a single game (see the list)")
-parser.add_argument('-n', '--number', type=int, default=1,
-    help="number of plays")
+parser.add_argument(
+    '-l',
+    '--list',
+    action="store_true",
+    help="list available games"
+)
+parser.add_argument(
+    '-g',
+    '--game',
+    type=str,
+    help="play a single game (see the list)"
+)
+parser.add_argument(
+    '-n',
+    '--number',
+    type=int,
+    default=1,
+    help="number of plays"
+)
 
 
-if __name__ == "__main__":
+def run():
     # Parse the options.
     options = parser.parse_args()
 
@@ -63,3 +76,7 @@ if __name__ == "__main__":
         if options.number > 1 and len(games) > 1:
             print("-" * 50)
     print("\nGood Luck! (you'll need it)\n\n")
+
+
+if __name__ == "__main__":
+    run()

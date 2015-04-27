@@ -1,7 +1,7 @@
 TN lotto
 ========
 
-Tools to generate random numbers for the `Tennessee lottery <http://www.tnlottery.com>`_.
+Tools to generate random numbers for the `Tennessee lottery <http://www.tnlottery.com>`_, and a very simple powerball simulator.
 
 Supported Games
 ---------------
@@ -58,12 +58,13 @@ Generate 5 sets of numbers for the Powerball
 Simulation
 ----------
 
-Run ``python simulation.py``. Currently, this just simulates playing the
-powerball, with the following assumptions:
+Run ``python tn_lottery/simulation.py``. Currently, this just simulates playing
+the powerball, with the following assumptions:
 
-- We play every time possible (two times a week)
-- We play 5 sets of numbers on each ticket at $2 each ($10 / ticket)
-- We only "win" if we hit the jackpot (all numbers match)
+- You are an immortal playing the TN powerball every chance you get. (2-times
+  a week; powerball is Wed & Sat)
+- You play 5 sets of numbers for $2 each ($10 / ticket)
+- You only "win" if you hit the jackpot (5 numbers match + the powerball number)
 
 The simulation runs until we hit the jackpot or kill it with Ctrl-C. It'll
 periodically print the number of years you've played and the amount of money

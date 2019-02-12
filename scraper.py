@@ -14,7 +14,7 @@ from html.parser import HTMLParser
 
 
 URL = "https://www.tnlottery.com/winners?page={page}"
-MAX_PAGES = 20
+MAX_PAGES = 20  # limit the number of pages requested, since empty returns 200
 
 
 class Parser(HTMLParser):

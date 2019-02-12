@@ -5,6 +5,7 @@ https://www.tnlottery.com/winners?page=0
 Then counts the amounts & the games.
 
 """
+import re
 import requests
 import statistics
 
@@ -13,6 +14,7 @@ from html.parser import HTMLParser
 
 
 URL = "https://www.tnlottery.com/winners?page={page}"
+MAX_PAGES = 20
 
 
 class Parser(HTMLParser):
@@ -77,7 +79,7 @@ def fetch_and_parse(page=0):
 if __name__ == "__main__":
 
     page = 0
-    while fetch_and_parse(page) == 200:
+    while fetch_and_parse(page) == 200 and page < MAX_PAGES:
         print(f"Got page {page}...")
         page += 1
 
@@ -95,9 +97,25 @@ if __name__ == "__main__":
     for amount, count in c.most_common(5):
         print(f"- {amount} ({count} wins)")
 
+    return
+
+    # TODO: ----- figure out how to parse amounts like: ----------------
+    # - $1,000 a Week for Life
+    # - $259.8 Million
+    # - $61 Million
+    # - VIP Rewards Drawing
+
     # Which games pay out the best...
-    data = [(g, int(a.replace("$", "").replace(",", ""))) for g, a in data]
-    data = sorted(data, lambda t: t[1])
+    results = []
+    for game, amount in [(g, a.replace("$", "").replace(",", "")) for g, a in data]:
+        try:
+            amts = re.finall(r'\d+', amount)
+            if amts:
+                results.append((game, int(amts[0])))
+        except (ValueError, AttributeError, TypeError) as err:
+            print(f"Unable to parse: {game}, {amount}")
+            print(err)
+    data = sorted(results, lambda t: t[1])
 
     d = defaultdict(list)
     for game, amount in data:

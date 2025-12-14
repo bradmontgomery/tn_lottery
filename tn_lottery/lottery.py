@@ -38,11 +38,15 @@ class Lottery(object):
 
     def powerball(self):
         """Returns a tuple of (``values``, ``powerball``) for the Powerball.
-        See: http://www.tnlottery.com/howtoplay/#power
-
+        
+        Current rules (as of 2021):
+        - 5 white balls from 1-69
+        - 1 red Powerball from 1-26
+        
+        See: https://www.powerball.com/how-to-play
         """
-        values = self._choose(num=5, val_range=(1, 59))
-        powerball = self._choose(num=1, val_range=(1, 35))[0]
+        values = self._choose(num=5, val_range=(1, 69))
+        powerball = self._choose(num=1, val_range=(1, 26))[0]
         return (values, powerball)
 
     def print_powerball(self):
@@ -56,11 +60,15 @@ class Lottery(object):
 
     def mega_millions(self):
         """Returns a tuple of (``values``, ``megaball``) for Mega Millions.
-        See: http://www.tnlottery.com/howtoplay/#mega
-
+        
+        Current rules (as of 2017):
+        - 5 white balls from 1-70
+        - 1 Mega Ball from 1-25
+        
+        See: https://www.megamillions.com/how-to-play
         """
-        values = self._choose(num=5, val_range=(1, 56))
-        megaball = self._choose(num=1, val_range=(1, 46))[0]
+        values = self._choose(num=5, val_range=(1, 70))
+        megaball = self._choose(num=1, val_range=(1, 25))[0]
         return (values, megaball)
 
     def print_mega_millions(self):

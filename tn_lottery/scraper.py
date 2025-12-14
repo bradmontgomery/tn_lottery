@@ -6,6 +6,7 @@ Then counts the amounts & the games.
 
 """
 import re
+import time
 import requests
 import statistics
 import rich_click as click
@@ -22,6 +23,8 @@ TN_URL = "https://www.tnlottery.com/winners?page={page}"
 PB_URL = "https://www.powerball.com/winners-gallery?pg={page}"
 TN_MAX_PAGES = 20
 PB_MAX_PAGES = 25 # Based on pagination seen in HTML
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # seconds
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -35,6 +38,37 @@ HEADERS = {
     "Sec-Fetch-User": "?1",
     "Cache-Control": "max-age=0",
 }
+
+
+def fetch_with_retry(url, max_retries=MAX_RETRIES, delay=RETRY_DELAY):
+    """Fetch URL with retry logic.
+    
+    Args:
+        url: URL to fetch
+        max_retries: Maximum number of retry attempts
+        delay: Delay in seconds between retries
+        
+    Returns:
+        requests.Response object or None if all retries failed
+    """
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=10)
+            if resp.status_code == 200:
+                return resp
+            elif resp.status_code == 429:  # Rate limited
+                console.print(f"[yellow]Rate limited, waiting {delay * (attempt + 1)}s...[/yellow]")
+                time.sleep(delay * (attempt + 1))
+            else:
+                console.print(f"[yellow]HTTP {resp.status_code}, attempt {attempt + 1}/{max_retries}[/yellow]")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+        except requests.exceptions.RequestException as e:
+            console.print(f"[yellow]Request error: {e}, attempt {attempt + 1}/{max_retries}[/yellow]")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+    
+    return None
 
 
 def parse_amount(amount_str):
@@ -54,7 +88,7 @@ def parse_amount(amount_str):
     try:
         # Remove any non-numeric chars except .
         clean_str = re.sub(r"[^\d\.]", "", clean_str)
-        return float(clean_str)
+        return float(clean_str) if clean_str else 0.0
     except ValueError:
         return 0.0
 
@@ -66,15 +100,20 @@ def scrape_tn_lottery():
         conn.execute("DELETE FROM tn_winners")
         conn.commit()
         
+        total_winners = 0
+        failed_pages = []
+        
         with console.status("[bold green]Scraping TN Lottery data...") as status:
             for page in range(TN_MAX_PAGES):
                 url = TN_URL.format(page=page)
+                
+                resp = fetch_with_retry(url)
+                if not resp:
+                    console.print(f"[red]Failed to fetch page {page} after retries[/red]")
+                    failed_pages.append(page)
+                    continue
+                
                 try:
-                    resp = requests.get(url, headers=HEADERS)
-                    if resp.status_code != 200:
-                        console.print(f"[red]Failed to fetch page {page}: Status {resp.status_code}[/red]")
-                        break
-                        
                     soup = BeautifulSoup(resp.content, "lxml")
                     
                     # Find all prize amounts
@@ -83,6 +122,7 @@ def scrape_tn_lottery():
                     
                     if not games:
                         console.print(f"[yellow]No data found on page {page}[/yellow]")
+                        continue
                     
                     for game, amount_str in zip(games, amounts):
                         amount = parse_amount(amount_str)
@@ -91,13 +131,22 @@ def scrape_tn_lottery():
                             (game, amount, amount_str)
                         )
                     
+                    total_winners += len(games)
                     console.print(f"Scraped page {page}: {len(games)} winners")
                     
+                    # Rate limiting - be nice to the server
+                    time.sleep(0.5)
+                    
                 except Exception as e:
-                    console.print(f"[red]Error scraping page {page}: {e}[/red]")
+                    console.print(f"[red]Error parsing page {page}: {e}[/red]")
+                    failed_pages.append(page)
         
         conn.commit()
-    console.print("[bold green]TN Lottery scraping complete![/bold green]")
+    
+    console.print(f"[bold green]TN Lottery scraping complete![/bold green]")
+    console.print(f"Total winners scraped: {total_winners}")
+    if failed_pages:
+        console.print(f"[yellow]Failed pages: {failed_pages}[/yellow]")
 
 
 def scrape_powerball_data():
@@ -106,16 +155,26 @@ def scrape_powerball_data():
         conn.execute("DELETE FROM powerball_winners")
         conn.commit()
         
+        total_winners = 0
+        failed_pages = []
+        
         with console.status("[bold blue]Scraping Powerball data...") as status:
             for page in range(1, PB_MAX_PAGES + 1):
                 url = PB_URL.format(page=page)
+                
+                resp = fetch_with_retry(url)
+                if not resp:
+                    console.print(f"[red]Failed to fetch page {page} after retries[/red]")
+                    failed_pages.append(page)
+                    continue
+                
                 try:
-                    resp = requests.get(url, headers=HEADERS)
-                    if resp.status_code != 200:
-                        break
-                        
                     soup = BeautifulSoup(resp.content, "lxml")
                     cards = soup.select("a.card")
+                    
+                    if not cards:
+                        console.print(f"[yellow]No data found on page {page}, stopping[/yellow]")
+                        break
                     
                     count = 0
                     for card in cards:
@@ -141,19 +200,35 @@ def scrape_powerball_data():
                             (name, state, amount, is_jackpot, amount_str)
                         )
                         count += 1
-                        
+                    
+                    total_winners += count
                     console.print(f"Scraped page {page}: {count} winners")
                     
+                    # Rate limiting - be nice to the server
+                    time.sleep(0.5)
+                    
                 except Exception as e:
-                    console.print(f"[red]Error scraping page {page}: {e}[/red]")
+                    console.print(f"[red]Error parsing page {page}: {e}[/red]")
+                    failed_pages.append(page)
         
         conn.commit()
-    console.print("[bold blue]Powerball scraping complete![/bold blue]")
+    
+    console.print(f"[bold blue]Powerball scraping complete![/bold blue]")
+    console.print(f"Total winners scraped: {total_winners}")
+    if failed_pages:
+        console.print(f"[yellow]Failed pages: {failed_pages}[/yellow]")
 
 
 def generate_report():
     """Generate statistics report from database."""
+    init_db()  # Ensure tables exist
     with get_db() as conn:
+        # Check if we have any data
+        count = conn.execute("SELECT COUNT(*) as c FROM tn_winners").fetchone()["c"]
+        if count == 0:
+            console.print("[yellow]No TN Lottery data found. Run 'tn-lottery scrape tn' first.[/yellow]")
+            return
+        
         # Most commonly won games
         rows = conn.execute("""
             SELECT game_name, COUNT(*) as count 
@@ -192,6 +267,7 @@ def generate_report():
         rows = conn.execute("""
             SELECT game_name, AVG(prize_amount) as avg_amount 
             FROM tn_winners 
+            WHERE prize_amount > 0
             GROUP BY game_name 
             ORDER BY avg_amount DESC
         """).fetchall()
@@ -207,13 +283,24 @@ def generate_report():
 
 def show_timeline():
     """Timeline of Powerball winnings over $1 Million."""
+    init_db()  # Ensure tables exist
     with get_db() as conn:
+        # Check if we have any data
+        count = conn.execute("SELECT COUNT(*) as c FROM powerball_winners").fetchone()["c"]
+        if count == 0:
+            console.print("[yellow]No Powerball data found. Run 'tn-lottery scrape powerball' first.[/yellow]")
+            return
+        
         rows = conn.execute("""
             SELECT winner_name, state, prize_amount, raw_amount_str, is_jackpot
             FROM powerball_winners 
             WHERE prize_amount >= 1000000
             ORDER BY prize_amount DESC
         """).fetchall()
+        
+        if not rows:
+            console.print("[yellow]No Powerball winnings over $1 Million found.[/yellow]")
+            return
         
         console.print("\n[bold]Powerball Winnings > $1 Million (by Amount)[/bold]")
         table = Table(show_header=True, header_style="bold magenta")

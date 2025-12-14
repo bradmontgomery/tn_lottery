@@ -10,7 +10,7 @@ from rich.table import Table
 
 from tn_lottery.lottery import Lottery
 from tn_lottery import simulation
-from tn_lottery.db import init_db, get_db
+from tn_lottery.db import init_db, get_db, DB_PATH
 
 console = Console()
 
@@ -19,6 +19,14 @@ console = Console()
 def cli():
     """TN Lottery tools for generating numbers, simulating games, and analyzing data."""
     pass
+
+
+@cli.command(name='db-path')
+def show_db_path():
+    """Show the database file location."""
+    console.print(f"[bold]Database location:[/bold] {DB_PATH}")
+    console.print(f"\nYou can change this by setting the TN_LOTTERY_DB environment variable.")
+    console.print(f"Example: export TN_LOTTERY_DB=/path/to/custom/lottery.db")
 
 
 @cli.command()

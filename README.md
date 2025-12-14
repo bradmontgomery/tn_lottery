@@ -2,10 +2,16 @@
 
 Tools to generate random numbers for the [Tennessee lottery](http://www.tnlottery.com), and a very simple powerball simulator.
 
+**Recent Updates:**
+- ✅ Unified CLI with single `tn-lottery` command
+- ✅ Updated game rules to current Powerball and Mega Millions specifications
+- ✅ Improved database management with configurable location
+- ✅ Enhanced error handling and retry logic in scrapers
+
 ## Supported Games
 
-* Powerball
-* Mega Millions
+* Powerball (current rules: 1-69 white balls, 1-26 powerball)
+* Mega Millions (current rules: 1-70 white balls, 1-25 mega ball)
 * Hot Lotto Sizzler
 * Tennessee Cash
 * Cash 4
@@ -73,6 +79,21 @@ tn-lottery report
 
 # View jackpot timeline
 tn-lottery timeline
+```
+
+## Configuration
+
+### Database Location
+
+By default, the database is stored at `~/.local/share/tn-lottery/lottery.db`. You can customize this:
+
+```bash
+# View current database location
+tn-lottery db-path
+
+# Use a custom database location
+export TN_LOTTERY_DB=/path/to/custom/lottery.db
+tn-lottery scrape tn
 ```
 
 *Disclaimer*: You'll likely just lose your money.

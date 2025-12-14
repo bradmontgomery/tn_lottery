@@ -61,7 +61,7 @@ tn-lottery play --game powerball --number 5
 
 ### Run the Powerball simulator
 
-The simulator now supports configurable parameters:
+The simulator now supports configurable parameters and tracks all prize tiers:
 
 ```bash
 # Run with default settings (until jackpot is won)
@@ -85,6 +85,17 @@ tn-lottery simulate \
 - `--cost-per-play` - Cost per play in dollars (default: $2.00)
 - `--duration` - Years to simulate, 0 = until jackpot (default: 0)
 - `--report-interval` - Years between progress reports (default: 10)
+
+**Prize Tracking:**
+The simulator tracks all 9 Powerball prize tiers:
+- Jackpot (5 + Powerball)
+- $1,000,000 (5 numbers)
+- $50,000 (4 + Powerball)
+- $100 (4 numbers or 3 + Powerball)
+- $7 (3 numbers or 2 + Powerball)
+- $4 (1 + Powerball or Powerball only)
+
+Results show realistic win rates (~25% of plays win something) and ROI calculations.
 
 ### Scrape lottery data
 

@@ -4,13 +4,16 @@
 Powerball Simulator
 
 Simulates playing the lottery over time to understand the financial impact.
-Supports configurable parameters for realistic modeling.
+Supports configurable parameters and tracks all prize tiers for realistic modeling.
 """
 
 import rich_click as click
+from collections import defaultdict
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 from tn_lottery.lottery import Lottery
+from tn_lottery.payouts import calculate_payout, get_tier_display_info
 
 console = Console()
 
@@ -39,24 +42,8 @@ def generate_ticket(lotto, plays, cost_per_play):
     return (numbers, plays * cost_per_play)
 
 
-def check_win(plays, winning_numbers):
-    """Check if the given plays match any of the winning numbers.
-
-    Args:
-        plays: List of powerball play tuples
-        winning_numbers: A powerball play tuple
-
-    A powerball play tuple contains a list of 5 numbers followed by a
-    powerball number. e.g. ([6, 20, 21, 52, 55], 27)
-
-    Returns:
-        Boolean indicating if any play matches the winning numbers
-    """
-    return winning_numbers in plays
-
-
 def play_drawing(lotto, plays_per_ticket, cost_per_play):
-    """Execute one lottery drawing.
+    """Execute one lottery drawing with prize tier tracking.
     
     Args:
         lotto: Lottery instance
@@ -64,28 +51,160 @@ def play_drawing(lotto, plays_per_ticket, cost_per_play):
         cost_per_play: Cost per individual play
         
     Returns:
-        Tuple of (won_jackpot: bool, cost: float)
+        Tuple of (winnings: float, wins_by_tier: dict, won_jackpot: bool, cost: float)
     """
     plays, cost = generate_ticket(lotto, plays_per_ticket, cost_per_play)
     winning_numbers = lotto.powerball()
-    return (check_win(plays, winning_numbers), cost)
+    
+    # Calculate winnings and track prize tiers
+    winnings, wins_by_tier, won_jackpot = calculate_payout(plays, winning_numbers)
+    
+    return (winnings, wins_by_tier, won_jackpot, cost)
 
-
-def print_progress(draws, spent, years_interval, won=False):
+def print_progress(draws, spent, won_total, wins_by_tier, years_interval, won_jackpot=False):
     """Print progress report during simulation.
     
     Args:
         draws: Number of drawings played
         spent: Total amount spent
+        won_total: Total amount won (excluding jackpot)
+        wins_by_tier: Dictionary of wins by tier name
         years_interval: Years represented by the interval
-        won: Whether jackpot was won
+        won_jackpot: Whether jackpot was won
     """
-    if won:
-        console.print("[bold green]YOU WON THE JACKPOT![/bold green]")
+    if won_jackpot:
+        console.print("[bold green]🎉 YOU WON THE JACKPOT! 🎉[/bold green]")
     
     years = draws / 52 / 2  # 2 draws per week, 52 weeks per year
-    cost = f"${spent:,.2f}"
-    console.print(f"[cyan]{years:.1f} Years ({draws:,} draws):[/cyan] [yellow]{cost} spent[/yellow]")
+    net = won_total - spent
+    roi = (won_total / spent * 100) if spent > 0 else 0
+    
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="yellow")
+    table.add_row("Years:", f"{years:.1f}")
+    table.add_row("Draws:", f"{draws:,}")
+    table.add_row("Spent:", f"${spent:,.2f}")
+    table.add_row("Won:", f"${won_total:,.2f}")
+    table.add_row("Net:", f"[{'green' if net >= 0 else 'red'}]${net:,.2f}[/]")
+    table.add_row("ROI:", f"{roi:.1f}%")
+    console.print(table)
+    console.print()
+
+
+def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, plays_per_week):
+    """Print comprehensive final summary of simulation.
+    
+    Args:
+        draws: Total number of drawings played
+        spent: Total amount spent
+        won_total: Total amount won (excluding jackpot)
+        all_wins_by_tier: Dictionary of all wins by tier name
+        won_jackpot: Whether jackpot was won
+        plays_per_week: Number of plays per week
+    """
+    years_played = draws / 52 / plays_per_week
+    net = won_total - spent
+    roi = (won_total / spent * 100) if spent > 0 else 0
+    total_wins = sum(all_wins_by_tier.values())
+    
+    console.print("\n" + "=" * 70)
+    console.print("[bold blue]SIMULATION COMPLETE[/bold blue]".center(70))
+    console.print("=" * 70 + "\n")
+    
+    # Overall Statistics
+    console.print("[bold]Overall Statistics:[/bold]")
+    stats_table = Table(show_header=False, box=None, padding=(0, 2))
+    stats_table.add_column("Metric", style="cyan")
+    stats_table.add_column("Value", style="yellow")
+    stats_table.add_row("Total Draws:", f"{draws:,}")
+    stats_table.add_row("Years Played:", f"{years_played:.2f}")
+    stats_table.add_row("Total Spent:", f"${spent:,.2f}")
+    stats_table.add_row("Total Won:", f"${won_total:,.2f}")
+    stats_table.add_row("Net Profit/Loss:", f"[{'green' if net >= 0 else 'red'}]${net:,.2f}[/]")
+    stats_table.add_row("ROI:", f"{roi:.1f}%")
+    stats_table.add_row("Won Jackpot:", "[green]Yes! 🎉[/green]" if won_jackpot else "[red]No[/red]")
+    stats_table.add_row("Total Wins:", f"{total_wins:,}")
+    console.print(stats_table)
+    console.print()
+    
+    # Wins Breakdown by Tier
+    if all_wins_by_tier:
+        console.print("[bold]Wins Breakdown by Prize Tier:[/bold]")
+        wins_table = Table(show_header=True, header_style="bold magenta")
+        wins_table.add_column("Prize Tier", style="cyan")
+        wins_table.add_column("Count", justify="right", style="yellow")
+        wins_table.add_column("Prize Amount", justify="right", style="green")
+        wins_table.add_column("Total Won", justify="right", style="green")
+        
+        # Get all prize tier info for display
+        tier_info = {name: prize for name, prize in get_tier_display_info()}
+        
+        # Display in order of prize tiers
+        for tier_name, prize_str in get_tier_display_info():
+            count = all_wins_by_tier.get(tier_name, 0)
+            if count > 0 or tier_name == "Jackpot":  # Always show jackpot
+                if tier_name == "Jackpot" and won_jackpot:
+                    wins_table.add_row(
+                        tier_name,
+                        "1",
+                        prize_str,
+                        "🎰 JACKPOT! 🎰",
+                        style="bold gold1"
+                    )
+                elif tier_name == "Jackpot":
+                    wins_table.add_row(
+                        tier_name,
+                        "0",
+                        prize_str,
+                        "$0",
+                        style="dim"
+                    )
+                else:
+                    # Extract numeric prize from display string
+                    prize_amount = int(prize_str.replace("$", "").replace(",", ""))
+                    total = count * prize_amount
+                    wins_table.add_row(
+                        tier_name,
+                        f"{count:,}",
+                        prize_str,
+                        f"${total:,}"
+                    )
+        
+        console.print(wins_table)
+        console.print()
+    
+    # Win Rate Statistics
+    win_rate = (total_wins / draws * 100) if draws > 0 else 0
+    console.print(f"[bold]Win Rate:[/bold] {win_rate:.2f}% ({total_wins:,} wins in {draws:,} draws)")
+    console.print()
+    
+    # Reality Check
+    if not won_jackpot and draws > 1000:
+        expected_roi = 0.50  # ~50% return on investment for Powerball (excluding jackpot)
+        console.print(Panel(
+            f"[yellow]Reality Check:[/yellow]\n\n"
+            f"You played {draws:,} times and spent ${spent:,.2f}.\n"
+            f"Your actual ROI was {roi:.1f}%, which is typical.\n\n"
+            f"Powerball's expected return (excluding jackpot) is about {expected_roi*100:.0f}%.\n"
+            f"This means for every $2 spent, you typically get back ~${expected_roi*2:.2f}.\n\n"
+            f"The odds of winning the jackpot are 1 in 292,201,338.\n"
+            f"[bold]Playing the lottery is entertainment, not investment.[/bold]",
+            title="📊 Analysis",
+            border_style="yellow"
+        ))
+    elif won_jackpot:
+        console.print(Panel(
+            f"[green]Congratulations![/green]\n\n"
+            f"You won the jackpot after {years_played:.1f} years!\n"
+            f"However, you spent ${spent:,.2f} to get there.\n\n"
+            f"[bold]The odds were 1 in 292,201,338.[/bold]\n"
+            f"You got incredibly lucky!",
+            title="🎰 Jackpot Winner!",
+            border_style="green"
+        ))
+    console.print()
+
 
 
 def run_simulation(
@@ -106,8 +225,10 @@ def run_simulation(
     """
     lotto = Lottery()
     spent = 0.0
+    won_total = 0.0
     draws = 0
     won_jackpot = False
+    all_wins_by_tier = defaultdict(int)
     
     # Calculate stopping point
     max_draws = int(duration_years * 52 * plays_per_week) if duration_years > 0 else None
@@ -132,44 +253,35 @@ def run_simulation(
     
     try:
         while not won_jackpot:
-            # Play one drawing
-            won_jackpot, cost = play_drawing(lotto, plays_per_ticket, cost_per_play)
+            # Play one drawing with prize tier tracking
+            winnings, wins_by_tier, won_jackpot, cost = play_drawing(
+                lotto, plays_per_ticket, cost_per_play
+            )
+            
+            # Update totals
             spent += cost
+            won_total += winnings
             draws += 1
+            
+            # Track wins by tier
+            for tier_name, count in wins_by_tier.items():
+                all_wins_by_tier[tier_name] += count
             
             # Check if we've hit the time limit
             if max_draws and draws >= max_draws:
-                console.print(f"\n[yellow]Reached {duration_years} year limit without winning jackpot[/yellow]")
+                console.print(f"\n[yellow]Reached {duration_years} year limit without winning jackpot[/yellow]\n")
                 break
             
             # Print progress reports
             if draws % report_frequency == 0:
-                print_progress(draws, spent, report_interval, False)
+                print_progress(draws, spent, won_total, all_wins_by_tier, report_interval, False)
         
-        # Final report
-        if won_jackpot:
-            console.print()
-            print_progress(draws, spent, report_interval, True)
-        
-        # Summary
-        years_played = draws / 52 / plays_per_week
-        console.print("\n[bold]Simulation Complete[/bold]")
-        summary = Table(show_header=False, box=None, padding=(0, 2))
-        summary.add_column("Metric", style="cyan")
-        summary.add_column("Value", style="yellow")
-        summary.add_row("Total draws:", f"{draws:,}")
-        summary.add_row("Years played:", f"{years_played:.2f}")
-        summary.add_row("Total spent:", f"${spent:,.2f}")
-        summary.add_row("Won jackpot:", "Yes! 🎉" if won_jackpot else "No")
-        console.print(summary)
-        console.print()
+        # Final comprehensive summary
+        print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, plays_per_week)
         
     except KeyboardInterrupt:
-        console.print("\n\n[yellow]Simulation interrupted by user[/yellow]")
-        years_played = draws / 52 / plays_per_week
-        console.print(f"Played {draws:,} draws over {years_played:.2f} years")
-        console.print(f"Total spent: ${spent:,.2f}")
-        console.print()
+        console.print("\n\n[yellow]Simulation interrupted by user[/yellow]\n")
+        print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, plays_per_week)
 
 
 @click.command()

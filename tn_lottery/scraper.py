@@ -11,151 +11,249 @@ import statistics
 import rich_click as click
 from rich.console import Console
 from rich.table import Table
+from rich.progress import track
 from collections import Counter, defaultdict
-from html.parser import HTMLParser
+from bs4 import BeautifulSoup
+from tn_lottery.db import init_db, get_db
 
 console = Console()
 
-URL = "https://www.tnlottery.com/winners?page={page}"
-MAX_PAGES = 20  # limit the number of pages requested, since empty returns 200
+TN_URL = "https://www.tnlottery.com/winners?page={page}"
+PB_URL = "https://www.powerball.com/winners-gallery?pg={page}"
+TN_MAX_PAGES = 20
+PB_MAX_PAGES = 25 # Based on pagination seen in HTML
 
+@click.group()
+def cli():
+    """Scrape and analyze lottery winner data."""
+    init_db()
 
-class Parser(HTMLParser):
-    """
-    I want content from:
-
-        li
-            div.views-field.views-field-field-prize-amount
-                div.field-content.prize-amount
-    And:
-
-        li
-            div.views-field.views-field-field-game-name
-                div.field-content.game-name
-
-    """
-
-    active = False
-    which = None
-    games = []
-    amounts = []
-
-    def handle_starttag(self, tag, attrs):
-        classes = [val for attr, val in attrs if attr == "class"]
-        classes = " ".join(classes).split()
-
-        if tag == "div" and "prize-amount" in classes:
-            self.active = True
-            self.which = "amounts"
-        elif tag == "div" and "game-name" in classes:
-            self.active = True
-            self.which = "games"
-
-    def handle_endtag(self, tag):
-        if tag == "div":
-            self.active = False
-
-    def handle_data(self, data):
-        if self.active and data and self.which == "games":
-            self.games.append(data.strip())
-        elif self.active and data and self.which == "amounts":
-            self.amounts.append(data.strip())
-
-    def get_data(self):
-        return list(zip(self.games, self.amounts))
-
-
-parser = Parser()
-
-
-def fetch_and_parse(page=0):
-    url = URL.format(page=page)
-    resp = requests.get(url)
-
-    content = None
-    if resp.status_code == 200:
-        content = resp.content.decode("utf-8")
-        parser.feed(content)
-
-    return resp.status_code
-
-
-@click.command()
-def run():
-    """Scrape winner data and calculate statistics."""
-    page = 0
-    with console.status("[bold green]Scraping data...") as status:
-        while fetch_and_parse(page) == 200 and page < MAX_PAGES:
-            console.print(f"Got page {page}...")
-            page += 1
-
-    # Grab data from the parser.
-    data = parser.get_data()
-
-    # Print some common stuff...
-    console.print("\n[bold]The Most commonly won games are:[/bold]")
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Game")
-    table.add_column("Wins", justify="right")
+def parse_amount(amount_str):
+    """Parse amount string to float."""
+    if not amount_str:
+        return 0.0
     
-    c = Counter([g for g, _ in data])
-    for game, count in c.most_common(5):
-        table.add_row(game, str(count))
-    console.print(table)
-
-    console.print("\n[bold]The most commonly won amounts are:[/bold]")
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Amount")
-    table.add_column("Wins", justify="right")
+    clean_str = amount_str.lower().strip().replace(",", "").replace("$", "")
     
-    c = Counter([amount for _, amount in data])
-    for amount, count in c.most_common(5):
-        table.add_row(amount, str(count))
-    console.print(table)
-
-    # TODO: ----- figure out how to parse amounts like: ----------------
-    # - $1,000 a Week for Life
-    # - $259.8 Million
-    # - $61 Million
-    # - VIP Rewards Drawing
-
-    # Which games pay out the best...
-    results = []
-    for game, amount in [(g, a.replace("$", "").replace(",", "")) for g, a in data]:
-        amount = amount.lower().strip()
-        if amount.endswith(" million"):
-            amount = float(amount.replace("million", "").strip()) * 1_000_000
-
+    if "million" in clean_str:
+        clean_str = clean_str.replace("million", "").strip()
         try:
-            # Replace anythign that doesn't look numeric.
-            amount = re.sub(r"[^\d+|\.]", "", str(amount))
-            if amount:
-                results.append((game, float(amount)))
-        except (ValueError, AttributeError, TypeError) as err:
-            console.print(f"[red]Unable to parse {game}: '{amount}'[/red]")
-            console.print(err)
+            return float(clean_str) * 1_000_000
+        except ValueError:
+            pass
+            
+    try:
+        # Remove any non-numeric chars except .
+        clean_str = re.sub(r"[^\d\.]", "", clean_str)
+        return float(clean_str)
+    except ValueError:
+        return 0.0
 
-    data = sorted(results, key=lambda t: t[1])
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
+}
 
-    d = defaultdict(list)
-    for game, amount in data:
-        d[game].append(amount)
+@cli.command()
+def scrape_tn():
+    """Scrape TN Lottery winners to database."""
+    with get_db() as conn:
+        # Clear existing data for a fresh scrape (optional, but good for this exercise)
+        conn.execute("DELETE FROM tn_winners")
+        conn.commit()
+        
+        with console.status("[bold green]Scraping TN Lottery data...") as status:
+            for page in range(TN_MAX_PAGES):
+                url = TN_URL.format(page=page)
+                try:
+                    resp = requests.get(url, headers=HEADERS)
+                    if resp.status_code != 200:
+                        console.print(f"[red]Failed to fetch page {page}: Status {resp.status_code}[/red]")
+                        break
+                        
+                    soup = BeautifulSoup(resp.content, "lxml")
+                    
+                    # Find all prize amounts
+                    amounts = [div.get_text(strip=True) for div in soup.select("div.prize-amount")]
+                    games = [div.get_text(strip=True) for div in soup.select("div.game-name")]
+                    
+                    if not games:
+                        console.print(f"[yellow]No data found on page {page}[/yellow]")
+                    
+                    for game, amount_str in zip(games, amounts):
+                        amount = parse_amount(amount_str)
+                        conn.execute(
+                            "INSERT INTO tn_winners (game_name, prize_amount, raw_amount_str) VALUES (?, ?, ?)",
+                            (game, amount, amount_str)
+                        )
+                    
+                    console.print(f"Scraped page {page}: {len(games)} winners")
+                    
+                except Exception as e:
+                    console.print(f"[red]Error scraping page {page}: {e}[/red]")
+        
+        conn.commit()
+    console.print("[bold green]TN Lottery scraping complete![/bold green]")
 
-    results = []
-    for game, values in d.items():
-        m = statistics.mean(values)
-        results.append((game, m))
+@cli.command()
+def scrape_powerball():
+    """Scrape Powerball winners to database."""
+    with get_db() as conn:
+        conn.execute("DELETE FROM powerball_winners")
+        conn.commit()
+        
+        with console.status("[bold blue]Scraping Powerball data...") as status:
+            for page in range(1, PB_MAX_PAGES + 1):
+                url = PB_URL.format(page=page)
+                try:
+                    resp = requests.get(url, headers=HEADERS)
+                    if resp.status_code != 200:
+                        break
+                        
+                    soup = BeautifulSoup(resp.content, "lxml")
+                    cards = soup.select("a.card")
+                    
+                    count = 0
+                    for card in cards:
+                        detail = card.select_one(".detail-wrap")
+                        if not detail:
+                            continue
+                            
+                        amount_tag = detail.select_one("h3")
+                        name_tag = detail.select_one("h4")
+                        state_tag = detail.select_one("h5")
+                        
+                        amount_str = amount_tag.get_text(strip=True) if amount_tag else ""
+                        name = name_tag.get_text(strip=True) if name_tag else "Unknown"
+                        state = state_tag.get_text(strip=True) if state_tag else "Unknown"
+                        
+                        amount = parse_amount(amount_str)
+                        is_jackpot = "jackpot" in amount_str.lower() or amount > 20_000_000 # Heuristic
+                        
+                        conn.execute(
+                            """INSERT INTO powerball_winners 
+                               (winner_name, state, prize_amount, is_jackpot, raw_amount_str) 
+                               VALUES (?, ?, ?, ?, ?)""",
+                            (name, state, amount, is_jackpot, amount_str)
+                        )
+                        count += 1
+                        
+                    console.print(f"Scraped page {page}: {count} winners")
+                    
+                except Exception as e:
+                    console.print(f"[red]Error scraping page {page}: {e}[/red]")
+        
+        conn.commit()
+    console.print("[bold blue]Powerball scraping complete![/bold blue]")
 
-    results = sorted(results, key=lambda t: t[1])
-    console.print("\n[bold]The best-paying games on average are:[/bold]")
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Game")
-    table.add_column("Average Amount", justify="right")
+@cli.command()
+def report():
+    """Generate statistics report from database."""
+    with get_db() as conn:
+        # Most commonly won games
+        rows = conn.execute("""
+            SELECT game_name, COUNT(*) as count 
+            FROM tn_winners 
+            GROUP BY game_name 
+            ORDER BY count DESC 
+            LIMIT 5
+        """).fetchall()
+        
+        console.print("\n[bold]The Most commonly won games are:[/bold]")
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Game")
+        table.add_column("Wins", justify="right")
+        for row in rows:
+            table.add_row(row["game_name"], str(row["count"]))
+        console.print(table)
 
-    for game, amount in results:
-        table.add_row(game, f"${int(amount):,}")
-    console.print(table)
+        # Most commonly won amounts
+        rows = conn.execute("""
+            SELECT raw_amount_str, COUNT(*) as count 
+            FROM tn_winners 
+            GROUP BY raw_amount_str 
+            ORDER BY count DESC 
+            LIMIT 5
+        """).fetchall()
+        
+        console.print("\n[bold]The most commonly won amounts are:[/bold]")
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Amount")
+        table.add_column("Wins", justify="right")
+        for row in rows:
+            table.add_row(row["raw_amount_str"], str(row["count"]))
+        console.print(table)
+        
+        # Best paying games
+        rows = conn.execute("""
+            SELECT game_name, AVG(prize_amount) as avg_amount 
+            FROM tn_winners 
+            GROUP BY game_name 
+            ORDER BY avg_amount DESC
+        """).fetchall()
+        
+        console.print("\n[bold]The best-paying games on average are:[/bold]")
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Game")
+        table.add_column("Average Amount", justify="right")
+        for row in rows:
+            table.add_row(row["game_name"], f"${int(row['avg_amount']):,}")
+        console.print(table)
 
+@cli.command()
+def timeline():
+    """Timeline of Powerball winnings over $1 Million."""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT winner_name, state, prize_amount, raw_amount_str, is_jackpot
+            FROM powerball_winners 
+            WHERE prize_amount >= 1000000
+            ORDER BY prize_amount DESC
+        """).fetchall()
+        
+        console.print("\n[bold]Powerball Winnings > $1 Million (by Amount)[/bold]")
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Winner")
+        table.add_column("State")
+        table.add_column("Amount", justify="right")
+        table.add_column("Jackpot?", justify="center")
+        
+        for row in rows:
+            is_jackpot = "Yes" if row["is_jackpot"] else "No"
+            style = "bold gold1" if row["is_jackpot"] else "white"
+            table.add_row(
+                str(row["winner_name"]), 
+                str(row["state"]), 
+                str(row["raw_amount_str"]), 
+                is_jackpot,
+                style=style
+            )
+        console.print(table)
+        
+        # Frequency analysis
+        console.print("\n[bold]Frequency of High Winnings[/bold]")
+        # Group by amount ranges
+        ranges = [
+            (1_000_000, 2_000_000, "$1M - $2M"),
+            (2_000_000, 10_000_000, "$2M - $10M"),
+            (10_000_000, 100_000_000, "$10M - $100M"),
+            (100_000_000, float('inf'), "> $100M")
+        ]
+        
+        for min_val, max_val, label in ranges:
+            count = conn.execute("""
+                SELECT COUNT(*) as c FROM powerball_winners 
+                WHERE prize_amount >= ? AND prize_amount < ?
+            """, (min_val, max_val)).fetchone()["c"]
+            console.print(f"{label}: {count} winners")
 
 if __name__ == "__main__":
-    run()
+    cli()

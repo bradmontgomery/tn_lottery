@@ -107,7 +107,13 @@ def simulate(plays_per_week, plays_per_ticket, cost_per_play, duration, report_i
     default=2.0,
     help="Cost per individual play in dollars (default: $2.00)"
 )
-def simulate_group_command(players, plays_per_player, cost_per_play):
+@click.option(
+    '--mode',
+    type=click.Choice(['auto', 'exact', 'parallel', 'statistical'], case_sensitive=False),
+    default='auto',
+    help="Simulation mode: auto (default), exact, parallel, or statistical"
+)
+def simulate_group_command(players, plays_per_player, cost_per_play, mode):
     """Simulate multiple people playing the lottery simultaneously.
     
     This shows population-level statistics and helps understand:
@@ -116,28 +122,61 @@ def simulate_group_command(players, plays_per_player, cost_per_play):
     - Law of large numbers in action
     - Variance between individual luck and population trends
     
-    Automatically selects simulation mode:
-    - Exact simulation for populations < 10,000
-    - Statistical estimation for populations >= 10,000
+    Simulation modes:
+    - Auto: Automatically selects best mode based on population size
+    - Exact: Simulates each player individually (best for < 1,000)
+    - Parallel: Uses multiple CPU cores (best for 1,000-10,000)
+    - Statistical: Fast probability-based estimation (best for 10,000+)
     
     Examples:
       tn-lottery simulate-group --players 100
       tn-lottery simulate-group --players 1000 --plays-per-player 3
       tn-lottery simulate-group --players 50 --cost-per-play 5.0
-      tn-lottery simulate-group --players 100000  # Uses statistical mode
+      tn-lottery simulate-group --players 100000 --mode statistical
+      tn-lottery simulate-group --players 5000 --mode parallel
     """
-    from tn_lottery.multiplayer import simulate_population_auto, print_population_results
-    
-    # Run simulation with automatic mode selection
-    result, mode = simulate_population_auto(
-        num_players=players,
-        plays_per_player=plays_per_player,
-        cost_per_play=cost_per_play,
-        show_progress=True
+    from tn_lottery.multiplayer import (
+        simulate_population_auto, 
+        simulate_population,
+        simulate_population_parallel,
+        simulate_population_statistical,
+        print_population_results
     )
     
+    # Select simulation mode
+    if mode == 'auto':
+        result, mode_name = simulate_population_auto(
+            num_players=players,
+            plays_per_player=plays_per_player,
+            cost_per_play=cost_per_play,
+            show_progress=True
+        )
+    elif mode == 'exact':
+        result = simulate_population(
+            num_players=players,
+            plays_per_player=plays_per_player,
+            cost_per_play=cost_per_play,
+            show_progress=True
+        )
+        mode_name = "Exact Simulation"
+    elif mode == 'parallel':
+        result = simulate_population_parallel(
+            num_players=players,
+            plays_per_player=plays_per_player,
+            cost_per_play=cost_per_play,
+            show_progress=True
+        )
+        mode_name = "Parallel Simulation"
+    else:  # statistical
+        result = simulate_population_statistical(
+            num_players=players,
+            plays_per_player=plays_per_player,
+            cost_per_play=cost_per_play
+        )
+        mode_name = "Statistical Estimation"
+    
     # Display results
-    print_population_results(result, plays_per_player, cost_per_play, mode)
+    print_population_results(result, plays_per_player, cost_per_play, mode_name)
 
 
 @cli.group()

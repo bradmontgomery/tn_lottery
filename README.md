@@ -63,3 +63,9 @@ the powerball, with the following assumptions:
 The simulation runs until we hit the jackpot or kill it with Ctrl-C. It'll
 periodically print the number of years you've played and the amount of money
 spent playing.
+
+## Scraper
+
+Run `python tn_lottery/scraper.py`. This script scrapes the TN Lottery website
+for recent winners and calculates statistics on the most commonly won games,
+amounts, and the best-paying games on average.

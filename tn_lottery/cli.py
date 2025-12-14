@@ -46,10 +46,46 @@ def games():
 
 
 @cli.command()
-def simulate():
-    """Run a Powerball simulation until jackpot is won."""
+@click.option(
+    '--plays-per-week',
+    type=int,
+    default=2,
+    help="How many times per week to play (default: 2)"
+)
+@click.option(
+    '--plays-per-ticket',
+    type=int,
+    default=5,
+    help="Number of play sets per ticket (default: 5)"
+)
+@click.option(
+    '--cost-per-play',
+    type=float,
+    default=2.0,
+    help="Cost per individual play in dollars (default: $2.00)"
+)
+@click.option(
+    '--duration',
+    type=int,
+    default=0,
+    help="Years to simulate (0 = until jackpot) (default: 0)"
+)
+@click.option(
+    '--report-interval',
+    type=int,
+    default=10,
+    help="Years between progress reports (default: 10)"
+)
+def simulate(plays_per_week, plays_per_ticket, cost_per_play, duration, report_interval):
+    """Run a Powerball simulation with configurable parameters."""
     from tn_lottery.simulation import run_simulation
-    run_simulation()
+    run_simulation(
+        plays_per_week=plays_per_week,
+        plays_per_ticket=plays_per_ticket,
+        cost_per_play=cost_per_play,
+        duration_years=duration,
+        report_interval=report_interval
+    )
 
 
 @cli.group()

@@ -61,9 +61,30 @@ tn-lottery play --game powerball --number 5
 
 ### Run the Powerball simulator
 
+The simulator now supports configurable parameters:
+
 ```bash
+# Run with default settings (until jackpot is won)
 tn-lottery simulate
+
+# Simulate playing for 20 years
+tn-lottery simulate --duration 20
+
+# Custom parameters
+tn-lottery simulate \
+  --plays-per-week 1 \
+  --plays-per-ticket 3 \
+  --cost-per-play 2.50 \
+  --duration 10 \
+  --report-interval 2
 ```
+
+**Available options:**
+- `--plays-per-week` - How often to play (default: 2)
+- `--plays-per-ticket` - Number of plays per ticket (default: 5)
+- `--cost-per-play` - Cost per play in dollars (default: $2.00)
+- `--duration` - Years to simulate, 0 = until jackpot (default: 0)
+- `--report-interval` - Years between progress reports (default: 10)
 
 ### Scrape lottery data
 

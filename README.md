@@ -94,7 +94,14 @@ tn-lottery simulate-group --players 50 --plays-per-player 5
 
 # Large population to see law of large numbers
 tn-lottery simulate-group --players 2000 --plays-per-player 3
+
+# Very large population (uses instant statistical mode)
+tn-lottery simulate-group --players 1000000
 ```
+
+**Performance:**
+- Populations < 10,000: Exact simulation
+- Populations ≥ 10,000: Statistical estimation (instant!)
 
 **Available options:**
 - `--plays-per-week` - How often to play (default: 2)

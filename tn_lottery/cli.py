@@ -116,15 +116,20 @@ def simulate_group_command(players, plays_per_player, cost_per_play):
     - Law of large numbers in action
     - Variance between individual luck and population trends
     
+    Automatically selects simulation mode:
+    - Exact simulation for populations < 10,000
+    - Statistical estimation for populations >= 10,000
+    
     Examples:
       tn-lottery simulate-group --players 100
       tn-lottery simulate-group --players 1000 --plays-per-player 3
       tn-lottery simulate-group --players 50 --cost-per-play 5.0
+      tn-lottery simulate-group --players 100000  # Uses statistical mode
     """
-    from tn_lottery.multiplayer import simulate_population, print_population_results
+    from tn_lottery.multiplayer import simulate_population_auto, print_population_results
     
-    # Run simulation
-    result = simulate_population(
+    # Run simulation with automatic mode selection
+    result, mode = simulate_population_auto(
         num_players=players,
         plays_per_player=plays_per_player,
         cost_per_play=cost_per_play,
@@ -132,7 +137,7 @@ def simulate_group_command(players, plays_per_player, cost_per_play):
     )
     
     # Display results
-    print_population_results(result, plays_per_player, cost_per_play)
+    print_population_results(result, plays_per_player, cost_per_play, mode)
 
 
 @cli.group()

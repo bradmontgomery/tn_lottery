@@ -35,19 +35,19 @@ Would be cool to see a graph of money spent vs. winnings over time.
     - `timeline`: Show Powerball jackpot timeline.
 
 **Implementation Steps:**
-1.  [ ] **Create `tn_lottery/cli.py`**: Initialize the main `click` group.
-2.  [ ] **Refactor `play.py`**:
+1.  [x] **Create `tn_lottery/cli.py`**: Initialize the main `click` group.
+2.  [x] **Refactor `play.py`**:
     -   Expose `play` logic as a function.
     -   Expose `list_games` logic as a function.
     -   Integrate into `cli.py` as `play` and `games` commands.
-3.  [ ] **Refactor `simulation.py`**:
+3.  [x] **Refactor `simulation.py`**:
     -   Expose the simulation logic as a function.
     -   Integrate into `cli.py` as `simulate` command.
-4.  [ ] **Refactor `scraper.py`**:
+4.  [x] **Refactor `scraper.py`**:
     -   Move `scrape_tn`, `scrape_powerball`, `report`, and `timeline` logic into reusable functions (remove internal `click` group).
     -   Integrate into `cli.py` (create a `scrape` group for the scrapers).
-5.  [ ] **Update `pyproject.toml`**:
+5.  [x] **Update `pyproject.toml`**:
     -   Add `[project.scripts]` section.
     -   Define `tn-lottery = "tn_lottery.cli:cli"`.
-6.  [ ] **Cleanup**: Remove `if __name__ == "__main__":` blocks from old files and ensure they are treated as modules.
-7.  [ ] **Verification**: Test all subcommands.
+6.  [x] **Cleanup**: Remove `if __name__ == "__main__":` blocks from old files and ensure they are treated as modules.
+7.  [x] **Verification**: Test all subcommands.

@@ -10,3 +10,6 @@ dependencies = [
     "rich>=14.2.0",
     "rich-click>=1.9.4",
 ]
+
+[project.scripts]
+tn-lottery = "tn_lottery.cli:cli"

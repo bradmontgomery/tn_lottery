@@ -23,10 +23,19 @@ PB_URL = "https://www.powerball.com/winners-gallery?pg={page}"
 TN_MAX_PAGES = 20
 PB_MAX_PAGES = 25 # Based on pagination seen in HTML
 
-@click.group()
-def cli():
-    """Scrape and analyze lottery winner data."""
-    init_db()
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.google.com/",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Fetch-User": "?1",
+    "Cache-Control": "max-age=0",
+}
+
 
 def parse_amount(amount_str):
     """Parse amount string to float."""
@@ -49,21 +58,8 @@ def parse_amount(amount_str):
     except ValueError:
         return 0.0
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.google.com/",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "cross-site",
-    "Sec-Fetch-User": "?1",
-    "Cache-Control": "max-age=0",
-}
 
-@cli.command()
-def scrape_tn():
+def scrape_tn_lottery():
     """Scrape TN Lottery winners to database."""
     with get_db() as conn:
         # Clear existing data for a fresh scrape (optional, but good for this exercise)
@@ -103,8 +99,8 @@ def scrape_tn():
         conn.commit()
     console.print("[bold green]TN Lottery scraping complete![/bold green]")
 
-@cli.command()
-def scrape_powerball():
+
+def scrape_powerball_data():
     """Scrape Powerball winners to database."""
     with get_db() as conn:
         conn.execute("DELETE FROM powerball_winners")
@@ -154,8 +150,8 @@ def scrape_powerball():
         conn.commit()
     console.print("[bold blue]Powerball scraping complete![/bold blue]")
 
-@cli.command()
-def report():
+
+def generate_report():
     """Generate statistics report from database."""
     with get_db() as conn:
         # Most commonly won games
@@ -208,8 +204,8 @@ def report():
             table.add_row(row["game_name"], f"${int(row['avg_amount']):,}")
         console.print(table)
 
-@cli.command()
-def timeline():
+
+def show_timeline():
     """Timeline of Powerball winnings over $1 Million."""
     with get_db() as conn:
         rows = conn.execute("""
@@ -254,6 +250,37 @@ def timeline():
                 WHERE prize_amount >= ? AND prize_amount < ?
             """, (min_val, max_val)).fetchone()["c"]
             console.print(f"{label}: {count} winners")
+
+
+@click.group()
+def cli():
+    """Scrape and analyze lottery winner data."""
+    init_db()
+
+
+@cli.command()
+def scrape_tn():
+    """Scrape TN Lottery winners to database."""
+    scrape_tn_lottery()
+
+
+@cli.command()
+def scrape_powerball():
+    """Scrape Powerball winners to database."""
+    scrape_powerball_data()
+
+
+@cli.command()
+def report():
+    """Generate statistics report from database."""
+    generate_report()
+
+
+@cli.command()
+def timeline():
+    """Timeline of Powerball winnings over $1 Million."""
+    show_timeline()
+
 
 if __name__ == "__main__":
     cli()

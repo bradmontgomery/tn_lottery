@@ -11,51 +11,87 @@ Tools to generate random numbers for the [Tennessee lottery](http://www.tnlotter
 * Cash 4
 * Cash 3
 
-## Usage
+## Installation
 
 1. Check out this repo.
-2. Run `python tn_lottery/play.py -h` for instructions.
+2. Install the package: `uv pip install -e .` (or `pip install -e .`)
 
-You can generate numbers forvarious games.
+## Usage
+
+The project provides a unified CLI via the `tn-lottery` command:
+
+```bash
+tn-lottery --help
+```
+
+### Available Commands
+
+* `tn-lottery games` - List available lottery games
+* `tn-lottery play` - Generate random numbers for games
+* `tn-lottery simulate` - Run Powerball simulation
+* `tn-lottery scrape` - Scrape lottery winner data
+* `tn-lottery report` - Generate statistics from scraped data
+* `tn-lottery timeline` - Show Powerball jackpot timeline
 
 ## Examples
 
-Generate one set of numbers for all games
+### List available games
 
-```
-$ python tn_lottery/play.py
-
-TN Lottery Numbers!
---------------------------------------------------
-Powerball: 03, 19, 22, 35, 47 - Powerball: 05
-Mega Millions: 08, 24, 26, 29, 53 - Mega Ball: 31
-TN Cash: 01, 05, 09, 17, 33 - Cash Ball: 04
-Cash 4: 7639
-Cash 3: 666
+```bash
+tn-lottery games
 ```
 
-Generate 5 sets of numbers for the Powerball
+### Generate one set of numbers for all games
 
+```bash
+tn-lottery play
 ```
-$ ./tn_lottery/play.py -g powerball -n 5
 
-powerball Numbers!
---------------------------------------------------
-Powerball: 05, 17, 23, 24, 54 - Powerball: 04
-Powerball: 21, 23, 35, 53, 58 - Powerball: 07
-Powerball: 15, 27, 30, 43, 47 - Powerball: 03
-Powerball: 17, 33, 38, 53, 55 - Powerball: 27
-Powerball: 03, 08, 29, 31, 35 - Powerball: 26
+### Generate 5 sets of numbers for Powerball
+
+```bash
+tn-lottery play --game powerball --number 5
+```
+
+### Run the Powerball simulator
+
+```bash
+tn-lottery simulate
+```
+
+### Scrape lottery data
+
+```bash
+# Scrape TN Lottery winners
+tn-lottery scrape tn
+
+# Scrape Powerball winners
+tn-lottery scrape powerball
+
+# View statistics report
+tn-lottery report
+
+# View jackpot timeline
+tn-lottery timeline
 ```
 
 *Disclaimer*: You'll likely just lose your money.
 
+## Legacy Usage
+
+The original scripts can still be run directly for backward compatibility:
+
+```bash
+python tn_lottery/play.py -h
+python tn_lottery/simulation.py
+python tn_lottery/scraper.py --help
+```
+
 ## Simulation
 
-Run `python tn_lottery/simulation.py`. Currently, this just simulates playing
-the powerball, with the following assumptions:
+The simulator runs a Powerball simulation with the following assumptions:
 
-- You are an immortal playing the TN powerball every chance you get. (2-times
+- You are an immortal playing the TN powerball every chance you get (2-times
   a week; powerball is Wed & Sat)
 - You play 5 sets of numbers for $2 each ($10 / ticket)
 - You only "win" if you hit the jackpot (5 numbers match + the powerball number)
@@ -66,6 +102,6 @@ spent playing.
 
 ## Scraper
 
-Run `python tn_lottery/scraper.py`. This script scrapes the TN Lottery website
-for recent winners and calculates statistics on the most commonly won games,
-amounts, and the best-paying games on average.
+The scraper collects winner data from the TN Lottery website and Powerball.com,
+stores it in a SQLite database, and calculates statistics on the most commonly
+won games, amounts, and the best-paying games on average.

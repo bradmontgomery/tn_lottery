@@ -9,24 +9,24 @@ from tn_lottery.lottery import Lottery
 console = Console()
 
 
-@click.command()
-@click.option('-l', '--list', 'list_games', is_flag=True, help="list available games")
-@click.option('-g', '--game', type=str, help="play a single game (see the list)")
-@click.option('-n', '--number', type=int, default=1, help="number of plays")
-def run(list_games, game, number):
-    """Generate numbers for some TN Lottery Games"""
+def list_games():
+    """Display a list of available lottery games."""
+    console.print("\nYou may use the following with the -g or --game flag:")
+    table = Table(show_header=False, box=None)
+    table.add_column("Key", style="cyan")
+    table.add_column("Name", style="green")
+    for key, title in Lottery.game_data.items():
+        table.add_row(key, title)
+    console.print(table)
 
-    # Print a list of games & exist (if applicable)
-    if list_games:
-        console.print("\nYou may use the following with the -g or --game flag:")
-        table = Table(show_header=False, box=None)
-        table.add_column("Key", style="cyan")
-        table.add_column("Name", style="green")
-        for key, title in Lottery.game_data.items():
-            table.add_row(key, title)
-        console.print(table)
-        sys.exit()
 
+def generate_numbers(game=None, number=1):
+    """Generate random lottery numbers.
+    
+    Args:
+        game: Specific game to play (if None, plays all games)
+        number: Number of times to generate numbers
+    """
     # The full list of games.
     games = Lottery.games()
     if game and game not in games:
@@ -57,6 +57,19 @@ def run(list_games, game, number):
         if number > 1 and len(games) > 1:
             console.print("-" * 50)
     console.print("\n[bold yellow]Good Luck! (you'll need it)[/bold yellow]\n\n")
+
+
+@click.command()
+@click.option('-l', '--list', 'list_games_flag', is_flag=True, help="list available games")
+@click.option('-g', '--game', type=str, help="play a single game (see the list)")
+@click.option('-n', '--number', type=int, default=1, help="number of plays")
+def run(list_games_flag, game, number):
+    """Generate numbers for some TN Lottery Games"""
+    if list_games_flag:
+        list_games()
+        sys.exit()
+    
+    generate_numbers(game, number)
 
 
 if __name__ == "__main__":

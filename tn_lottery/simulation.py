@@ -72,8 +72,8 @@ def report(trials, spent, won=False):
     console.print(f"[cyan]{years} Years:[/cyan] [yellow]{cost}[/yellow]")
 
 
-@click.command()
-def run():
+def run_simulation():
+    """Run the Powerball simulation until jackpot is won."""
     lotto = Lottery()
     spent = 0  # how much we've spent
     trials = 0  # Number of time's we've bought a ticket
@@ -90,6 +90,12 @@ def run():
             report(trials, spent, won)
 
     report(trials, spent, won)
+
+
+@click.command()
+def run():
+    """Run the Powerball simulation."""
+    run_simulation()
 
 
 if __name__ == "__main__":

@@ -1,9 +1,7 @@
-TODO
-====
+# TODO
 
+## Build a simulator
 
-Build a simulator
------------------
 Inputs:
 - How often the game is played (e.g. 2 times / week for powerball)
 - How much a ticket costs (and how many you play at a time?)

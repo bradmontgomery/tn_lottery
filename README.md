@@ -7,6 +7,9 @@ Tools to generate random numbers for the [Tennessee lottery](http://www.tnlotter
 - ✅ Updated game rules to current Powerball and Mega Millions specifications
 - ✅ Improved database management with configurable location
 - ✅ Enhanced error handling and retry logic in scrapers
+- ✅ **Full prize tier tracking with all 9 Powerball levels**
+- ✅ **Visual progress reports with bar charts and statistics**
+- ✅ **Comprehensive analysis with spending breakdowns**
 
 ## Supported Games
 

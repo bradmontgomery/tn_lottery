@@ -12,6 +12,7 @@ from collections import defaultdict
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from tn_lottery.lottery import Lottery
 from tn_lottery.payouts import calculate_payout, get_tier_display_info
 
@@ -23,6 +24,25 @@ DEFAULT_PLAYS_PER_TICKET = 5
 DEFAULT_PLAYS_PER_WEEK = 2
 DEFAULT_DURATION_YEARS = 0  # 0 = forever (until jackpot)
 DEFAULT_REPORT_INTERVAL = 10  # Report every N years
+
+
+def create_simple_bar_chart(value, max_value, width=30):
+    """Create a simple text-based bar chart.
+    
+    Args:
+        value: Current value
+        max_value: Maximum value for scaling
+        width: Width of bar in characters
+        
+    Returns:
+        String representation of bar
+    """
+    if max_value == 0:
+        filled = 0
+    else:
+        filled = int((value / max_value) * width)
+    bar = "█" * filled + "░" * (width - filled)
+    return bar
 
 
 def generate_ticket(lotto, plays, cost_per_play):
@@ -62,7 +82,7 @@ def play_drawing(lotto, plays_per_ticket, cost_per_play):
     return (winnings, wins_by_tier, won_jackpot, cost)
 
 def print_progress(draws, spent, won_total, wins_by_tier, years_interval, won_jackpot=False):
-    """Print progress report during simulation.
+    """Print enhanced progress report during simulation with visual elements.
     
     Args:
         draws: Number of drawings played
@@ -78,22 +98,48 @@ def print_progress(draws, spent, won_total, wins_by_tier, years_interval, won_ja
     years = draws / 52 / 2  # 2 draws per week, 52 weeks per year
     net = won_total - spent
     roi = (won_total / spent * 100) if spent > 0 else 0
+    total_wins = sum(wins_by_tier.values())
+    win_rate = (total_wins / draws * 100) if draws > 0 else 0
     
-    table = Table(show_header=False, box=None, padding=(0, 2))
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="yellow")
-    table.add_row("Years:", f"{years:.1f}")
-    table.add_row("Draws:", f"{draws:,}")
-    table.add_row("Spent:", f"${spent:,.2f}")
-    table.add_row("Won:", f"${won_total:,.2f}")
-    table.add_row("Net:", f"[{'green' if net >= 0 else 'red'}]${net:,.2f}[/]")
-    table.add_row("ROI:", f"{roi:.1f}%")
+    # Create progress report table
+    table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 2))
+    table.add_column("Progress Update", style="bold cyan")
+    table.add_column("Value", justify="right", style="yellow")
+    table.add_column("Visual", style="green")
+    
+    # Years
+    table.add_row("Years:", f"{years:.1f}", "")
+    
+    # Draws with bar
+    max_draws_display = draws
+    draws_bar = create_simple_bar_chart(draws, max(draws, 1000), width=20)
+    table.add_row("Draws:", f"{draws:,}", draws_bar)
+    
+    # Money spent
+    table.add_row("Spent:", f"${spent:,.2f}", "")
+    
+    # Money won with bar showing vs spent
+    won_bar = create_simple_bar_chart(won_total, spent, width=20)
+    table.add_row("Won:", f"${won_total:,.2f}", won_bar)
+    
+    # Net (color coded)
+    net_color = "green" if net >= 0 else "red"
+    table.add_row("Net:", f"[{net_color}]${net:,.2f}[/]", "")
+    
+    # ROI with bar
+    roi_bar = create_simple_bar_chart(max(0, roi), 100, width=20)
+    table.add_row("ROI:", f"{roi:.1f}%", roi_bar)
+    
+    # Wins
+    table.add_row("Total Wins:", f"{total_wins:,}", "")
+    table.add_row("Win Rate:", f"{win_rate:.1f}%", "")
+    
     console.print(table)
     console.print()
 
 
 def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, plays_per_week):
-    """Print comprehensive final summary of simulation.
+    """Print comprehensive final summary with enhanced visualizations.
     
     Args:
         draws: Total number of drawings played
@@ -112,23 +158,35 @@ def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, 
     console.print("[bold blue]SIMULATION COMPLETE[/bold blue]".center(70))
     console.print("=" * 70 + "\n")
     
-    # Overall Statistics
+    # Overall Statistics with visual bars
     console.print("[bold]Overall Statistics:[/bold]")
-    stats_table = Table(show_header=False, box=None, padding=(0, 2))
+    stats_table = Table(show_header=True, header_style="bold magenta", box=None, padding=(0, 2))
     stats_table.add_column("Metric", style="cyan")
-    stats_table.add_column("Value", style="yellow")
-    stats_table.add_row("Total Draws:", f"{draws:,}")
-    stats_table.add_row("Years Played:", f"{years_played:.2f}")
-    stats_table.add_row("Total Spent:", f"${spent:,.2f}")
-    stats_table.add_row("Total Won:", f"${won_total:,.2f}")
-    stats_table.add_row("Net Profit/Loss:", f"[{'green' if net >= 0 else 'red'}]${net:,.2f}[/]")
-    stats_table.add_row("ROI:", f"{roi:.1f}%")
-    stats_table.add_row("Won Jackpot:", "[green]Yes! 🎉[/green]" if won_jackpot else "[red]No[/red]")
-    stats_table.add_row("Total Wins:", f"{total_wins:,}")
+    stats_table.add_column("Value", justify="right", style="yellow")
+    stats_table.add_column("Visualization", style="green")
+    
+    stats_table.add_row("Total Draws:", f"{draws:,}", "")
+    stats_table.add_row("Years Played:", f"{years_played:.2f}", "")
+    stats_table.add_row("Total Spent:", f"${spent:,.2f}", "")
+    
+    # Won vs Spent visualization
+    won_bar = create_simple_bar_chart(won_total, spent, width=25)
+    stats_table.add_row("Total Won:", f"${won_total:,.2f}", won_bar)
+    
+    # Net profit/loss
+    net_color = "green" if net >= 0 else "red"
+    stats_table.add_row("Net Profit/Loss:", f"[{net_color}]${net:,.2f}[/]", "")
+    
+    # ROI with bar (capped at 100 for display)
+    roi_bar = create_simple_bar_chart(max(0, min(roi, 100)), 100, width=25)
+    stats_table.add_row("ROI:", f"{roi:.1f}%", roi_bar)
+    
+    stats_table.add_row("Won Jackpot:", "[green]Yes! 🎉[/green]" if won_jackpot else "[red]No[/red]", "")
+    stats_table.add_row("Total Wins:", f"{total_wins:,}", "")
     console.print(stats_table)
     console.print()
     
-    # Wins Breakdown by Tier
+    # Wins Breakdown by Tier with visual bars
     if all_wins_by_tier:
         console.print("[bold]Wins Breakdown by Prize Tier:[/bold]")
         wins_table = Table(show_header=True, header_style="bold magenta")
@@ -136,20 +194,26 @@ def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, 
         wins_table.add_column("Count", justify="right", style="yellow")
         wins_table.add_column("Prize Amount", justify="right", style="green")
         wins_table.add_column("Total Won", justify="right", style="green")
+        wins_table.add_column("Distribution", style="blue")
         
         # Get all prize tier info for display
         tier_info = {name: prize for name, prize in get_tier_display_info()}
+        max_wins = max(all_wins_by_tier.values()) if all_wins_by_tier else 1
         
         # Display in order of prize tiers
         for tier_name, prize_str in get_tier_display_info():
             count = all_wins_by_tier.get(tier_name, 0)
             if count > 0 or tier_name == "Jackpot":  # Always show jackpot
+                # Create distribution bar
+                dist_bar = create_simple_bar_chart(count, max_wins, width=15)
+                
                 if tier_name == "Jackpot" and won_jackpot:
                     wins_table.add_row(
                         tier_name,
                         "1",
                         prize_str,
                         "🎰 JACKPOT! 🎰",
+                        "🎊" * 15,
                         style="bold gold1"
                     )
                 elif tier_name == "Jackpot":
@@ -158,6 +222,7 @@ def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, 
                         "0",
                         prize_str,
                         "$0",
+                        "░" * 15,
                         style="dim"
                     )
                 else:
@@ -168,27 +233,81 @@ def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, 
                         tier_name,
                         f"{count:,}",
                         prize_str,
-                        f"${total:,}"
+                        f"${total:,}",
+                        dist_bar
                     )
         
         console.print(wins_table)
         console.print()
     
-    # Win Rate Statistics
+    # Win Rate Statistics with comparison
     win_rate = (total_wins / draws * 100) if draws > 0 else 0
-    console.print(f"[bold]Win Rate:[/bold] {win_rate:.2f}% ({total_wins:,} wins in {draws:,} draws)")
+    expected_win_rate = 4.0  # ~4% overall win probability for Powerball
+    
+    console.print("[bold]Win Statistics:[/bold]")
+    win_stats_table = Table(show_header=False, box=None, padding=(0, 2))
+    win_stats_table.add_column("Metric", style="cyan")
+    win_stats_table.add_column("Your Result", style="yellow")
+    win_stats_table.add_column("Expected", style="green")
+    
+    win_rate_bar = create_simple_bar_chart(win_rate, 30, width=15)
+    win_stats_table.add_row(
+        "Win Rate:",
+        f"{win_rate:.2f}% ({total_wins:,}/{draws:,}) {win_rate_bar}",
+        f"~{expected_win_rate:.1f}%"
+    )
+    
+    roi_bar = create_simple_bar_chart(max(0, roi), 100, width=15)
+    win_stats_table.add_row(
+        "ROI:",
+        f"{roi:.1f}% {roi_bar}",
+        "~50%"
+    )
+    
+    avg_win = won_total / total_wins if total_wins > 0 else 0
+    win_stats_table.add_row(
+        "Avg Win Amount:",
+        f"${avg_win:.2f}",
+        "~$4-5"
+    )
+    
+    console.print(win_stats_table)
     console.print()
     
+    # Spending Analysis
+    if years_played > 0:
+        console.print("[bold]Spending Analysis:[/bold]")
+        spending_table = Table(show_header=False, box=None, padding=(0, 2))
+        spending_table.add_column("Period", style="cyan")
+        spending_table.add_column("Amount", justify="right", style="yellow")
+        
+        cost_per_week = spent / (years_played * 52)
+        cost_per_month = spent / (years_played * 12)
+        cost_per_year = spent / years_played
+        
+        spending_table.add_row("Per Week:", f"${cost_per_week:.2f}")
+        spending_table.add_row("Per Month:", f"${cost_per_month:.2f}")
+        spending_table.add_row("Per Year:", f"${cost_per_year:.2f}")
+        
+        console.print(spending_table)
+        console.print()
+    
     # Reality Check
-    if not won_jackpot and draws > 1000:
+    if not won_jackpot and draws > 100:
         expected_roi = 0.50  # ~50% return on investment for Powerball (excluding jackpot)
+        
+        # Calculate what percentage through to expected jackpot win
+        jackpot_odds = 292_201_338
+        progress_to_jackpot = (draws / jackpot_odds) * 100
+        
         console.print(Panel(
             f"[yellow]Reality Check:[/yellow]\n\n"
             f"You played {draws:,} times and spent ${spent:,.2f}.\n"
-            f"Your actual ROI was {roi:.1f}%, which is typical.\n\n"
+            f"Your actual ROI was {roi:.1f}%, which is {'above' if roi > 50 else 'below' if roi < 50 else 'at'} typical.\n\n"
             f"Powerball's expected return (excluding jackpot) is about {expected_roi*100:.0f}%.\n"
             f"This means for every $2 spent, you typically get back ~${expected_roi*2:.2f}.\n\n"
-            f"The odds of winning the jackpot are 1 in 292,201,338.\n"
+            f"The odds of winning the jackpot are 1 in {jackpot_odds:,}.\n"
+            f"You've played {progress_to_jackpot:.4f}% of the way to expected jackpot.\n\n"
             f"[bold]Playing the lottery is entertainment, not investment.[/bold]",
             title="📊 Analysis",
             border_style="yellow"
@@ -199,7 +318,10 @@ def print_final_summary(draws, spent, won_total, all_wins_by_tier, won_jackpot, 
             f"You won the jackpot after {years_played:.1f} years!\n"
             f"However, you spent ${spent:,.2f} to get there.\n\n"
             f"[bold]The odds were 1 in 292,201,338.[/bold]\n"
-            f"You got incredibly lucky!",
+            f"You got incredibly lucky!\n\n"
+            f"In reality, this would take approximately:\n"
+            f"• 2.8 million years playing 2x/week\n"
+            f"• Or cost ~$584 million buying all combinations",
             title="🎰 Jackpot Winner!",
             border_style="green"
         ))

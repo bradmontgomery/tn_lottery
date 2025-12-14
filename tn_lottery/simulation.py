@@ -15,7 +15,6 @@ Assumptions:
 
 """
 
-import locale
 import rich_click as click
 from rich.console import Console
 from tn_lottery.lottery import Lottery
@@ -69,14 +68,12 @@ def report(trials, spent, won=False):
     if won:
         console.print("[bold green]YOU WON![/bold green]")
     years = int(trials/YEARS * 10)  # years grouped by 10s
-    cost = locale.currency(spent, grouping=True)
+    cost = f"${spent:,.2f}"
     console.print(f"[cyan]{years} Years:[/cyan] [yellow]{cost}[/yellow]")
 
 
 @click.command()
 def run():
-    locale.setlocale(locale.LC_ALL, '')  # Assume US because that's where TN is.
-
     lotto = Lottery()
     spent = 0  # how much we've spent
     trials = 0  # Number of time's we've bought a ticket

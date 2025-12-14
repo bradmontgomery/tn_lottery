@@ -432,6 +432,134 @@ def simulate_population_auto(
     return result, mode
 
 
+def print_roi_histogram(player_results: List[PlayerResult]):
+    """Print ROI distribution histogram.
+    
+    Args:
+        player_results: List of player results
+    """
+    from rich.console import Console
+    from rich.table import Table
+    
+    console = Console()
+    
+    # Define ROI buckets
+    buckets = [
+        (float('inf'), 200, "200%+"),
+        (200, 100, "100-200%"),
+        (100, 50, "50-100%"),
+        (50, 20, "20-50%"),
+        (20, 0, "0-20%"),
+        (0, -50, "-50-0%"),
+        (-50, -100, "< -100%"),
+    ]
+    
+    # Count players in each bucket
+    bucket_counts = {label: 0 for _, _, label in buckets}
+    total = len(player_results)
+    
+    for player in player_results:
+        roi = player.roi
+        for upper, lower, label in buckets:
+            if lower <= roi < upper:
+                bucket_counts[label] += 1
+                break
+    
+    # Create histogram
+    histogram_table = Table(show_header=True, header_style="bold cyan", box=None, padding=(0, 1))
+    histogram_table.add_column("ROI Range", style="yellow", width=12)
+    histogram_table.add_column("Count", justify="right", style="cyan", width=8)
+    histogram_table.add_column("Percent", justify="right", style="green", width=8)
+    histogram_table.add_column("Distribution", style="blue", width=40)
+    
+    for _, _, label in buckets:
+        count = bucket_counts[label]
+        pct = (count / total * 100) if total > 0 else 0
+        
+        # Create bar visualization
+        bar_length = int(pct / 2)  # Scale to fit in 40 chars (2% per char)
+        bar = "█" * bar_length
+        
+        # Color based on ROI
+        if "+" in label or label.startswith("200") or label.startswith("100") or label.startswith("50") or label.startswith("20"):
+            style = "green"
+        elif label.startswith("0"):
+            style = "yellow"
+        else:
+            style = "red"
+        
+        histogram_table.add_row(
+            label,
+            f"{count:,}",
+            f"{pct:.1f}%",
+            f"[{style}]{bar}[/]"
+        )
+    
+    console.print(histogram_table)
+
+
+def print_jackpot_winner_details(result: PopulationResult, plays_per_player: int, cost_per_play: float):
+    """Print detailed jackpot winner information.
+    
+    Args:
+        result: PopulationResult containing jackpot winners
+        plays_per_player: Number of plays per player
+        cost_per_play: Cost per play
+    """
+    from rich.console import Console
+    from rich.panel import Panel
+    
+    if not result.jackpot_winners:
+        return
+    
+    console = Console()
+    total_plays = result.num_players * plays_per_player
+    
+    for winner_id in result.jackpot_winners:
+        # Find winner in player results if available
+        winner_player = None
+        if result.player_results:
+            for player in result.player_results:
+                if player.player_id == winner_id:
+                    winner_player = player
+                    break
+        
+        # Calculate stats
+        player_cost = plays_per_player * cost_per_play
+        
+        # Build winner details
+        details = []
+        details.append(f"[bold gold1]🎰 JACKPOT WINNER! 🎰[/bold gold1]\n")
+        details.append(f"Player #{winner_id} won the GRAND PRIZE!\n")
+        details.append(f"[bold]This occurred after:[/bold]")
+        details.append(f"  • {result.num_players:,} people played")
+        details.append(f"  • ${result.total_spent:,.0f} spent in total")
+        
+        # Expected probability
+        jackpot_odds = 292201338
+        prob_at_least_one = (1 - (1 - 1/jackpot_odds) ** total_plays) * 100
+        details.append(f"  • Expected probability: {prob_at_least_one:.4f}%\n")
+        
+        details.append(f"[bold]Lucky Player Stats:[/bold]")
+        details.append(f"  • Spent: ${player_cost:.2f}")
+        
+        if winner_player:
+            other_winnings = winner_player.won - 0  # Jackpot not in won total yet in our model
+            details.append(f"  • Other prizes: ${other_winnings:.2f}")
+            details.append(f"  • Total won: JACKPOT + ${other_winnings:.2f}")
+            details.append(f"  • ROI: ∞% (Jackpot!)")
+        else:
+            details.append(f"  • Won: [bold]JACKPOT[/bold]")
+        
+        panel = Panel(
+            "\n".join(details),
+            border_style="gold1",
+            padding=(1, 2)
+        )
+        console.print(panel)
+        console.print()
+
+
 def print_population_results(result: PopulationResult, plays_per_player: int, cost_per_play: float, mode: str = "Exact Simulation"):
     """Print comprehensive population simulation results.
     
@@ -531,12 +659,10 @@ def print_population_results(result: PopulationResult, plays_per_player: int, co
     console.print(outcome_table)
     console.print()
     
-    # Jackpot winners
+    # Jackpot winners - Enhanced details
     if result.jackpot_winners:
-        console.print(f"[bold green]Jackpot Winners:[/bold green] {len(result.jackpot_winners)} player(s)")
-        for winner_id in result.jackpot_winners:
-            console.print(f"  🎰 Player #{winner_id}")
-        console.print()
+        console.print(f"[bold green]🎰 Jackpot Winners: {len(result.jackpot_winners)} player(s) 🎰[/bold green]\n")
+        print_jackpot_winner_details(result, plays_per_player, cost_per_play)
     else:
         console.print("[dim]Jackpot Winners: 0[/dim]\n")
     
@@ -552,6 +678,25 @@ def print_population_results(result: PopulationResult, plays_per_player: int, co
         stats_table.add_row("Median ROI:", f"{result.median_roi:.1f}%")
         stats_table.add_row("Std Deviation:", f"{result.std_dev_roi:.1f}%")
         
+        # Add percentile analysis
+        roi_values = [p.roi for p in result.player_results]
+        if roi_values:
+            roi_values_sorted = sorted(roi_values)
+            n = len(roi_values_sorted)
+            
+            def percentile(p):
+                k = (n - 1) * p / 100
+                f = int(k)
+                c = f + 1 if f + 1 < n else f
+                return roi_values_sorted[f] + (k - f) * (roi_values_sorted[c] - roi_values_sorted[f])
+            
+            stats_table.add_row("25th Percentile:", f"{percentile(25):.1f}%")
+            stats_table.add_row("75th Percentile:", f"{percentile(75):.1f}%")
+            stats_table.add_row("90th Percentile:", f"{percentile(90):.1f}%")
+            stats_table.add_row("95th Percentile:", f"{percentile(95):.1f}%")
+            if n >= 100:  # Only show 99th for larger populations
+                stats_table.add_row("99th Percentile:", f"{percentile(99):.1f}%")
+        
         if result.best_player:
             stats_table.add_row(
                 f"Best Player (#{result.best_player.player_id}):",
@@ -565,6 +710,12 @@ def print_population_results(result: PopulationResult, plays_per_player: int, co
         
         console.print(stats_table)
         console.print()
+        
+        # ROI Distribution Histogram (for exact mode)
+        if len(result.player_results) >= 10:
+            console.print("[bold]ROI Distribution:[/bold]")
+            print_roi_histogram(result.player_results)
+            console.print()
     else:
         # Statistical mode - show aggregate statistics only
         console.print("[bold]Win Statistics:[/bold]")

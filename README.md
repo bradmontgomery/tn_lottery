@@ -84,7 +84,7 @@ tn-lottery simulate \
   --report-interval 2
 ```
 
-**Multi-Player Simulation (NEW!):**
+**Multi-Player Simulation:**
 ```bash
 # Simulate 100 people each playing once
 tn-lottery simulate-group --players 100
@@ -99,9 +99,13 @@ tn-lottery simulate-group --players 2000 --plays-per-player 3
 tn-lottery simulate-group --players 1000000
 ```
 
-**Performance:**
-- Populations < 10,000: Exact simulation
+**Features:**
+- Populations < 10,000: Exact simulation with full statistics
 - Populations ≥ 10,000: Statistical estimation (instant!)
+- ROI distribution histogram (exact mode)
+- Percentile analysis (25th, 75th, 90th, 95th, 99th)
+- Enhanced jackpot winner details
+- Educational insights about probability
 
 **Available options:**
 - `--plays-per-week` - How often to play (default: 2)

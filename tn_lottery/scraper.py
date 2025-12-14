@@ -8,10 +8,13 @@ Then counts the amounts & the games.
 import re
 import requests
 import statistics
-
+import rich_click as click
+from rich.console import Console
+from rich.table import Table
 from collections import Counter, defaultdict
 from html.parser import HTMLParser
 
+console = Console()
 
 URL = "https://www.tnlottery.com/winners?page={page}"
 MAX_PAGES = 20  # limit the number of pages requested, since empty returns 200
@@ -77,25 +80,38 @@ def fetch_and_parse(page=0):
     return resp.status_code
 
 
-if __name__ == "__main__":
+@click.command()
+def run():
+    """Scrape winner data and calculate statistics."""
     page = 0
-    while fetch_and_parse(page) == 200 and page < MAX_PAGES:
-        print(f"Got page {page}...")
-        page += 1
+    with console.status("[bold green]Scraping data...") as status:
+        while fetch_and_parse(page) == 200 and page < MAX_PAGES:
+            console.print(f"Got page {page}...")
+            page += 1
 
     # Grab data from the parser.
     data = parser.get_data()
 
     # Print some common stuff...
-    print("\nThe Most commonly won games are:")
+    console.print("\n[bold]The Most commonly won games are:[/bold]")
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Game")
+    table.add_column("Wins", justify="right")
+    
     c = Counter([g for g, _ in data])
     for game, count in c.most_common(5):
-        print(f"- {game} ({count} wins)")
+        table.add_row(game, str(count))
+    console.print(table)
 
-    print("\nThe most commonly won amounts are:")
+    console.print("\n[bold]The most commonly won amounts are:[/bold]")
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Amount")
+    table.add_column("Wins", justify="right")
+    
     c = Counter([amount for _, amount in data])
     for amount, count in c.most_common(5):
-        print(f"- {amount} ({count} wins)")
+        table.add_row(amount, str(count))
+    console.print(table)
 
     # TODO: ----- figure out how to parse amounts like: ----------------
     # - $1,000 a Week for Life
@@ -116,8 +132,8 @@ if __name__ == "__main__":
             if amount:
                 results.append((game, float(amount)))
         except (ValueError, AttributeError, TypeError) as err:
-            print(f"Unable to parse {game}: '{amount}'")
-            print(err)
+            console.print(f"[red]Unable to parse {game}: '{amount}'[/red]")
+            console.print(err)
 
     data = sorted(results, key=lambda t: t[1])
 
@@ -131,6 +147,15 @@ if __name__ == "__main__":
         results.append((game, m))
 
     results = sorted(results, key=lambda t: t[1])
-    print("\nThe best-paying games on average are:")
+    console.print("\n[bold]The best-paying games on average are:[/bold]")
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Game")
+    table.add_column("Average Amount", justify="right")
+
     for game, amount in results:
-        print(f"- {game}:\t ${int(amount):,}")
+        table.add_row(game, f"${int(amount):,}")
+    console.print(table)
+
+
+if __name__ == "__main__":
+    run()

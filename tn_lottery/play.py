@@ -1,76 +1,62 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import argparse
 import sys
+import rich_click as click
+from rich.console import Console
+from rich.table import Table
+from tn_lottery.lottery import Lottery
 
-from lottery import Lottery
-
-
-parser = argparse.ArgumentParser(
-    description="Generate numbers for some TN Lottery Games"
-)
-parser.add_argument(
-    '-l',
-    '--list',
-    action="store_true",
-    help="list available games"
-)
-parser.add_argument(
-    '-g',
-    '--game',
-    type=str,
-    help="play a single game (see the list)"
-)
-parser.add_argument(
-    '-n',
-    '--number',
-    type=int,
-    default=1,
-    help="number of plays"
-)
+console = Console()
 
 
-def run():
-    # Parse the options.
-    options = parser.parse_args()
+@click.command()
+@click.option('-l', '--list', 'list_games', is_flag=True, help="list available games")
+@click.option('-g', '--game', type=str, help="play a single game (see the list)")
+@click.option('-n', '--number', type=int, default=1, help="number of plays")
+def run(list_games, game, number):
+    """Generate numbers for some TN Lottery Games"""
 
     # Print a list of games & exist (if applicable)
-    if options.list:
-        print("\nYou may use the following with the -g or --game flag:")
-        for game, title in Lottery.game_data.items():
-            print("* {0} -- {1}.".format(game, title))
+    if list_games:
+        console.print("\nYou may use the following with the -g or --game flag:")
+        table = Table(show_header=False, box=None)
+        table.add_column("Key", style="cyan")
+        table.add_column("Name", style="green")
+        for key, title in Lottery.game_data.items():
+            table.add_row(key, title)
+        console.print(table)
         sys.exit()
 
     # The full list of games.
     games = Lottery.games()
-    if options.game and options.game not in games:
-        sys.stderr.write("\n{0} is not a valid game.\n".format(options.game))
+    if game and game not in games:
+        console.print(f"[bold red]\n{game} is not a valid game.[/bold red]")
         sys.exit(1)
-    elif options.game:
-        games = [options.game]  # Just play a single game
+    elif game:
+        games = [game]  # Just play a single game
 
     # Prints randomly generated numbers for the selected TN Lottery game
-    print("\n" + "+" * 50)
-    game_name = options.game if options.game else "TN Lottery"
-    print("{0} Numbers!".format(game_name))
-    print("-" * 50)
-    for n in range(options.number):
+    console.print("\n" + "[bold blue]" + "+" * 50 + "[/bold blue]")
+    game_name = game if game else "TN Lottery"
+    console.print(f"[bold green]{game_name} Numbers![/bold green]")
+    console.print("[bold blue]" + "-" * 50 + "[/bold blue]")
+    for n in range(number):
         lottery = Lottery()
         if "powerball" in games:
-            print(lottery.print_powerball())
+            console.print(lottery.print_powerball())
         if "megamillions" in games:
-            print(lottery.print_mega_millions())
+            console.print(lottery.print_mega_millions())
         if "hotlotto" in games:
-            print(lottery.print_hot_lotto_sizzler())
+            console.print(lottery.print_hot_lotto_sizzler())
         if "tncash" in games:
-            print(lottery.print_tn_cash())
+            console.print(lottery.print_tn_cash())
         if "cash4" in games:
-            print(lottery.print_cash_four())
+            console.print(lottery.print_cash_four())
         if "cash3" in games:
-            print(lottery.print_cash_three())
-        if options.number > 1 and len(games) > 1:
-            print("-" * 50)
-    print("\nGood Luck! (you'll need it)\n\n")
+            console.print(lottery.print_cash_three())
+        if number > 1 and len(games) > 1:
+            console.print("-" * 50)
+    console.print("\n[bold yellow]Good Luck! (you'll need it)[/bold yellow]\n\n")
 
 
 if __name__ == "__main__":

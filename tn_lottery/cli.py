@@ -88,6 +88,53 @@ def simulate(plays_per_week, plays_per_ticket, cost_per_play, duration, report_i
     )
 
 
+@cli.command(name='simulate-group')
+@click.option(
+    '--players',
+    type=int,
+    default=100,
+    help="Number of players to simulate (default: 100)"
+)
+@click.option(
+    '--plays-per-player',
+    type=int,
+    default=5,
+    help="Number of plays each player makes (default: 5)"
+)
+@click.option(
+    '--cost-per-play',
+    type=float,
+    default=2.0,
+    help="Cost per individual play in dollars (default: $2.00)"
+)
+def simulate_group_command(players, plays_per_player, cost_per_play):
+    """Simulate multiple people playing the lottery simultaneously.
+    
+    This shows population-level statistics and helps understand:
+    - What percentage of players profit vs lose
+    - How winnings are distributed across a population
+    - Law of large numbers in action
+    - Variance between individual luck and population trends
+    
+    Examples:
+      tn-lottery simulate-group --players 100
+      tn-lottery simulate-group --players 1000 --plays-per-player 3
+      tn-lottery simulate-group --players 50 --cost-per-play 5.0
+    """
+    from tn_lottery.multiplayer import simulate_population, print_population_results
+    
+    # Run simulation
+    result = simulate_population(
+        num_players=players,
+        plays_per_player=plays_per_player,
+        cost_per_play=cost_per_play,
+        show_progress=True
+    )
+    
+    # Display results
+    print_population_results(result, plays_per_player, cost_per_play)
+
+
 @cli.group()
 def scrape():
     """Scrape lottery winner data from various sources."""

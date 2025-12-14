@@ -10,6 +10,7 @@ Tools to generate random numbers for the [Tennessee lottery](http://www.tnlotter
 - ✅ **Full prize tier tracking with all 9 Powerball levels**
 - ✅ **Visual progress reports with bar charts and statistics**
 - ✅ **Comprehensive analysis with spending breakdowns**
+- ✅ **NEW: Multi-player simulation to demonstrate population statistics**
 
 ## Supported Games
 
@@ -64,8 +65,9 @@ tn-lottery play --game powerball --number 5
 
 ### Run the Powerball simulator
 
-The simulator now supports configurable parameters and tracks all prize tiers:
+The simulator supports both individual and multi-player modes:
 
+**Individual Simulation:**
 ```bash
 # Run with default settings (until jackpot is won)
 tn-lottery simulate
@@ -80,6 +82,18 @@ tn-lottery simulate \
   --cost-per-play 2.50 \
   --duration 10 \
   --report-interval 2
+```
+
+**Multi-Player Simulation (NEW!):**
+```bash
+# Simulate 100 people each playing once
+tn-lottery simulate-group --players 100
+
+# Office pool: 50 people, 5 plays each
+tn-lottery simulate-group --players 50 --plays-per-player 5
+
+# Large population to see law of large numbers
+tn-lottery simulate-group --players 2000 --plays-per-player 3
 ```
 
 **Available options:**

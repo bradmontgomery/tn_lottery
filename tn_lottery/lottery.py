@@ -28,9 +28,9 @@ class Lottery(object):
         return max(len(g) for g in Lottery.game_data.values())
 
     def _choose(self, num, val_range):
-        """Randomly choose ``num`` values in the ``val_range`` range."""
+        """Randomly choose ``num`` unique values in the ``val_range`` range."""
         vmin, vmax = val_range
-        return sorted([random.randint(vmin, vmax) for i in range(num)])
+        return sorted(random.sample(range(vmin, vmax + 1), num))
 
     def _to_str_list(self, values):
         """convert a list of int's to a list of str's."""

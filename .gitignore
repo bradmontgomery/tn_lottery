@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 build/
+
+# Test coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+*.cover

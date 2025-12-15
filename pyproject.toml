@@ -1,0 +1,24 @@
+[project]
+name = "tn-lottery"
+version = "0.1.0"
+description = "Tennessee lottery number generator with Powerball simulator, multi-player analysis, and winner data scraping"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "lxml>=6.0.2",
+    "numpy>=2.2.3",
+    "requests>=2.32.5",
+    "rich>=14.2.0",
+    "rich-click>=1.9.4",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+]
+
+[project.scripts]
+tn-lottery = "tn_lottery.cli:cli"
